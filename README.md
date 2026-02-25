@@ -212,5 +212,6 @@ After starting the server, create an admin user through the registration endpoin
 - View own marks breakdown
 - Download PDF report card
 - View attendance records
+- view marks
 
 
