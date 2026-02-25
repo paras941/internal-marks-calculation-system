@@ -12,7 +12,7 @@ router.post('/register', [
   body('firstName').notEmpty().withMessage('First name is required'),
   body('lastName').notEmpty().withMessage('Last name is required'),
   body('role').isIn(['admin', 'faculty', 'hod', 'student']).withMessage('Invalid role')
-], validate, protect, authorize('admin'), register);
+], validate, register);
 
 router.post('/login', [
   body('email').isEmail().withMessage('Please provide a valid email'),
