@@ -26,6 +26,17 @@ A full-stack Internal Marks Calculation System built with Node.js, Express, Mong
   - Old value
   - New value
   - Timestamp
+  - Result Locking Mechanism
+
+-**Admin/HOD can lock finalized marks**:
+- Locked marks cannot be edited by faculty
+- Unlock requires Admin override
+- Prevents accidental or unauthorized modification\
+
+-**Version History Tracking**:
+- Every time marks are edited, a new version is created
+- Previous versions remain stored
+- Allows rollback to older versions
 
 ## Tech Stack
 
