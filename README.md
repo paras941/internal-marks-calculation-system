@@ -40,20 +40,20 @@ A full-stack Internal Marks Calculation System built with Node.js, Express, Mong
  
   - **Core Features**
 🔐 Advanced Security Architecture
-1. Token-Based Authentication with Rotation
+1. **Token-Based Authentication with Rotation**
    - Short-lived Access Tokens (15 min)
    -Long-lived Refresh Tokens (7 days)
    -HTTP-only secure cookie storage
    -Refresh token rotation
    -Automatic invalidation on reuse
 
-2. Two-Factor Authentication (2FA)
+2. **Two-Factor Authentication (2FA)**
   -Enabled for Admin and HOD roles
   -TOTP-based authentication (Google Authenticator compatible)
   -Optional email OTP verification
   -Secure secret generation and QR setup
 
-3. Role-Based Access Control (RBAC)
+3. **Role-Based Access Control (RBAC)**
    -Strict authorization layers:
    -Admin
    -HOD
@@ -64,7 +64,7 @@ A full-stack Internal Marks Calculation System built with Node.js, Express, Mong
    -Subject ownership validation
    -Locked result protection
 
-4. Account Protection
+4. **Account Protection**
    -Login rate limiting (brute-force prevention)
    -Account lock after multiple failed attempts
    -IP address and device logging
