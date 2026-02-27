@@ -37,6 +37,38 @@ A full-stack Internal Marks Calculation System built with Node.js, Express, Mong
   - Every time marks are edited, a new version is created
   - Previous versions remain stored
   - Allows rollback to older versions
+ 
+  - **Core Features**
+🔐 Advanced Security Architecture
+1. Token-Based Authentication with Rotation
+   - Short-lived Access Tokens (15 min)
+   -Long-lived Refresh Tokens (7 days)
+   -HTTP-only secure cookie storage
+   -Refresh token rotation
+   -Automatic invalidation on reuse
+
+2. Two-Factor Authentication (2FA)
+  -Enabled for Admin and HOD roles
+  -TOTP-based authentication (Google Authenticator compatible)
+  -Optional email OTP verification
+  -Secure secret generation and QR setup
+
+3. Role-Based Access Control (RBAC)
+   -Strict authorization layers:
+   -Admin
+   -HOD
+   -Faculty
+   -Student
+**Access restrictions include:**
+   -Department-level control
+   -Subject ownership validation
+   -Locked result protection
+
+4. Account Protection
+   -Login rate limiting (brute-force prevention)
+   -Account lock after multiple failed attempts
+   -IP address and device logging
+   -Suspicious login detection
 
 ## Tech Stack
 
@@ -224,5 +256,4 @@ After starting the server, create an admin user through the registration endpoin
 - Download PDF report card
 - View attendance records
 - view marks
-
-
+  
