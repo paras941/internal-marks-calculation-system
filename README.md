@@ -44,6 +44,7 @@ A comprehensive full-stack academic management system for calculating, managing,
   - Grace marks
   - Attendance threshold rules
   - Best-of-two exam logic
+<<<<<<< HEAD
 - CSV bulk upload for marks entry
 - Marks approval workflow (draft &rarr; calculated &rarr; submitted &rarr; approved)
 
@@ -62,6 +63,67 @@ A comprehensive full-stack academic management system for calculating, managing,
 - Complete audit trail with export capability
 
 ---
+=======
+- **Faculty Dashboard**:
+  - Enter marks
+  - Upload marks via CSV
+  - Edit marks with audit logging
+- **Student Dashboard**:
+  - View internal marks breakdown
+  - Download PDF report card
+- **Analytics Dashboard** with charts:
+  - Class average
+  - Subject performance
+  - Attendance distribution
+- **Audit Logging System** tracking:
+  - Who modified marks
+  - Old value
+  - New value
+  - Timestamp
+  - Result Locking Mechanism
+
+- **Admin/HOD can lock finalized marks**:
+  - Locked marks cannot be edited by faculty
+  - Unlock requires Admin override
+  - Prevents accidental or unauthorized modification\
+
+- **Version History Tracking**:
+  - Every time marks are edited, a new version is created
+  - Previous versions remain stored
+  - Allows rollback to older versions
+ 
+  - **Core Features**
+🔐 Advanced Security Architecture
+1. **Token-Based Authentication with Rotation**
+   - Short-lived Access Tokens (15 min)
+   -Long-lived Refresh Tokens (7 days)
+   -HTTP-only secure cookie storage
+   -Refresh token rotation
+   -Automatic invalidation on reuse
+
+2. **Two-Factor Authentication (2FA)**
+  -Enabled for Admin and HOD roles
+  -TOTP-based authentication (Google Authenticator compatible)
+  -Optional email OTP verification
+  -Secure secret generation and QR setup
+
+3. **Role-Based Access Control (RBAC)**
+   -Strict authorization layers:
+   -Admin
+   -HOD
+   -Faculty
+   -Student
+**Access restrictions include:**
+   -Department-level control
+   -Subject ownership validation
+   -Locked result protection
+
+4. **Account Protection**
+   -Login rate limiting (brute-force prevention)
+   -Account lock after multiple failed attempts
+   -IP address and device logging
+   -Suspicious login detection
+>>>>>>> dc5c83890fd8ae9607c86ea4b772dd6c677a24e0
 
 ## Tech Stack
 
@@ -343,6 +405,7 @@ curl -X POST http://localhost:5000/api/auth/register \
 - View own marks breakdown by subject and component
 - Download PDF report card
 - View attendance records
+<<<<<<< HEAD
 
 ---
 
@@ -385,3 +448,7 @@ finalMarks    = weightedMarks + graceMarks + attendanceBonus
 **Internal Marks Calculation System** &mdash; Built for academic excellence
 
 </div>
+=======
+- view marks
+  
+>>>>>>> dc5c83890fd8ae9607c86ea4b772dd6c677a24e0
