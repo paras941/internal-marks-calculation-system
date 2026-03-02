@@ -1,18 +1,19 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { 
-  LayoutDashboard, 
-  Users, 
-  BookOpen, 
-  ClipboardList, 
-  Calendar, 
-  BarChart3, 
-  FileText, 
+import {
+  LayoutDashboard,
+  Users,
+  BookOpen,
+  ClipboardList,
+  Calendar,
+  BarChart3,
+  FileText,
   LogOut,
   Menu,
   X,
-  GraduationCap
+  GraduationCap,
+  ChevronRight
 } from 'lucide-react';
 
 const Layout = () => {
@@ -23,6 +24,10 @@ const Layout = () => {
   const handleLogout = async () => {
     await logout();
     navigate('/login');
+  };
+
+  const getInitials = (firstName, lastName) => {
+    return `${(firstName || '')[0] || ''}${(lastName || '')[0] || ''}`.toUpperCase();
   };
 
   const adminMenu = [
@@ -36,28 +41,42 @@ const Layout = () => {
     { path: '/my-marks', icon: GraduationCap, label: 'My Marks', roles: ['student'] }
   ];
 
-  const filteredMenu = adminMenu.filter(item => 
+  const filteredMenu = adminMenu.filter(item =>
     item.roles.includes(user?.role)
   );
 
   return (
     <div className="app-container">
       {/* Mobile Toggle */}
-      <button 
+      <button
         className="btn btn-secondary"
-        style={{ position: 'fixed', top: '1rem', left: '1rem', zIndex: 1000, display: 'none' }}
+        style={{
+          position: 'fixed',
+          top: '1rem',
+          left: '1rem',
+          zIndex: 200,
+          display: 'none',
+          width: '40px',
+          height: '40px',
+          padding: 0,
+          borderRadius: '0.625rem'
+        }}
         onClick={() => setSidebarOpen(!sidebarOpen)}
       >
         {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
       {/* Sidebar */}
-      <aside className="sidebar" style={{ display: sidebarOpen ? 'block' : 'none' }}>
+      <aside className="sidebar" style={{ display: sidebarOpen ? 'flex' : 'none' }}>
+        {/* Logo */}
         <div className="sidebar-logo">
-          <GraduationCap size={28} />
+          <div className="logo-icon-sidebar">
+            <GraduationCap size={22} color="white" />
+          </div>
           <span>Internal Marks</span>
         </div>
 
+        {/* Navigation */}
         <nav className="sidebar-nav">
           {filteredMenu.map(item => (
             <NavLink
@@ -66,16 +85,26 @@ const Layout = () => {
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
               end={item.path === '/'}
             >
-              <item.icon size={20} />
+              <item.icon size={19} />
               <span>{item.label}</span>
             </NavLink>
           ))}
         </nav>
 
-        <div style={{ marginTop: 'auto', paddingTop: '2rem' }}>
-          <button onClick={handleLogout} className="nav-item" style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer' }}>
-            <LogOut size={20} />
-            <span>Logout</span>
+        {/* User Section at Bottom */}
+        <div className="sidebar-user">
+          <div className="sidebar-user-info">
+            <div className="sidebar-avatar">
+              {getInitials(user?.firstName, user?.lastName)}
+            </div>
+            <div>
+              <div className="sidebar-user-name">{user?.firstName} {user?.lastName}</div>
+              <div className="sidebar-user-role">{user?.role}</div>
+            </div>
+          </div>
+          <button onClick={handleLogout} className="sidebar-logout">
+            <LogOut size={18} />
+            <span>Sign Out</span>
           </button>
         </div>
       </aside>
@@ -83,11 +112,16 @@ const Layout = () => {
       {/* Main Content */}
       <main className="main-content">
         <header className="header">
-          <div></div>
+          <div className="header-welcome">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </div>
           <div className="user-info">
             <div className="user-details">
               <div className="user-name">{user?.firstName} {user?.lastName}</div>
-              <div className="user-role">{user?.role?.toUpperCase()}</div>
+              <div className="user-role">{user?.role}</div>
+            </div>
+            <div className="user-avatar">
+              {getInitials(user?.firstName, user?.lastName)}
             </div>
           </div>
         </header>

@@ -16,8 +16,9 @@ const PrivateRoute = ({ children, roles }) => {
 
   if (isLoading) {
     return (
-      <div className="loading">
+      <div className="loading-fullpage">
         <div className="spinner"></div>
+        <div className="loading-text">Loading your workspace...</div>
       </div>
     );
   }

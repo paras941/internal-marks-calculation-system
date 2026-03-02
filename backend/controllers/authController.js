@@ -25,22 +25,21 @@ exports.register = async (req, res) => {
       });
     }
 
-    // Create user
-    const user = await User.create({
-      email,
-      password,
-      firstName,
-      lastName,
-      role,
-      department,
-      semester,
-      section,
-      enrollmentNumber
-    });
+    // Build user data, only including non-empty optional fields
+    // This prevents Mongoose CastErrors (e.g. semester: '' -> Number)
+    // and duplicate key errors (e.g. enrollmentNumber: '' on unique index)
+    const userData = { email, password, firstName, lastName, role };
+    if (department) userData.department = department;
+    if (semester !== undefined && semester !== '') userData.semester = Number(semester);
+    if (section) userData.section = section;
+    if (enrollmentNumber) userData.enrollmentNumber = enrollmentNumber;
 
-    // Create audit log
+    // Create user
+    const user = await User.create(userData);
+
+    // Create audit log (req.user is undefined for self-registration)
     await AuditLog.create({
-      userId: req.user._id,
+      userId: req.user ? req.user._id : user._id,
       action: 'CREATE',
       entityType: 'USER',
       entityId: user._id,
