@@ -27,6 +27,7 @@ const Login = () => {
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [regErrors, setRegErrors] = useState({});
 
   const [regData, setRegData] = useState({
     firstName: '',
@@ -65,12 +66,45 @@ const Login = () => {
   };
 
   const handleRegisterChange = (e) => {
-    setRegData({ ...regData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setRegData(prev => ({ ...prev, [name]: value }));
+    if (regErrors[name]) setRegErrors(prev => ({ ...prev, [name]: '' }));
+  };
+
+  const validateRegForm = () => {
+    const errors = {};
+    if (!regData.firstName.trim()) errors.firstName = 'First name is required';
+    if (!regData.lastName.trim()) errors.lastName = 'Last name is required';
+    if (!regData.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regData.email)) {
+      errors.email = 'Invalid email format';
+    }
+    if (!regData.password) {
+      errors.password = 'Password is required';
+    } else if (regData.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+    if (regData.role === 'student') {
+      if (!regData.enrollmentNumber.trim()) errors.enrollmentNumber = 'Enrollment number is required';
+      if (regData.semester && (Number(regData.semester) < 1 || Number(regData.semester) > 8)) {
+        errors.semester = 'Semester must be between 1 and 8';
+      }
+    }
+    return errors;
   };
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setRegErrors({});
+
+    const validationErrors = validateRegForm();
+    if (Object.keys(validationErrors).length > 0) {
+      setRegErrors(validationErrors);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -102,7 +136,25 @@ const Login = () => {
         }
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
+      const data = err.response?.data;
+
+      // Network/backend-down case: Axios has no response object.
+      if (!err.response) {
+        setError('Cannot connect to server. Please ensure backend is running on port 5000.');
+      } else if (data?.errors && data.errors.length > 0) {
+        const fieldErrors = {};
+        data.errors.forEach((e) => {
+          if (e.field) fieldErrors[e.field] = e.message;
+        });
+
+        if (Object.keys(fieldErrors).length > 0) {
+          setRegErrors(fieldErrors);
+        }
+
+        setError(data.errors.map((e) => e.message).join(' • '));
+      } else {
+        setError(data?.message || 'Registration failed');
+      }
     }
 
     setLoading(false);
@@ -110,11 +162,13 @@ const Login = () => {
 
   const switchToRegister = () => {
     setError('');
+    setRegErrors({});
     setIsRegistering(true);
   };
 
   const switchToLogin = () => {
     setError('');
+    setRegErrors({});
     setIsRegistering(false);
   };
 
@@ -191,9 +245,10 @@ const Login = () => {
                       value={regData.firstName}
                       onChange={handleRegisterChange}
                       placeholder="First name"
-                      required
+                      style={{ borderColor: regErrors.firstName ? '#ef4444' : '' }}
                     />
                   </div>
+                  {regErrors.firstName && <span style={{ color: '#ef4444', fontSize: '0.72rem', marginTop: '0.2rem', display: 'block' }}>{regErrors.firstName}</span>}
                 </div>
                 <div className="form-group">
                   <label className="form-label">Last Name</label>
@@ -206,9 +261,10 @@ const Login = () => {
                       value={regData.lastName}
                       onChange={handleRegisterChange}
                       placeholder="Last name"
-                      required
+                      style={{ borderColor: regErrors.lastName ? '#ef4444' : '' }}
                     />
                   </div>
+                  {regErrors.lastName && <span style={{ color: '#ef4444', fontSize: '0.72rem', marginTop: '0.2rem', display: 'block' }}>{regErrors.lastName}</span>}
                 </div>
               </div>
 
@@ -217,15 +273,16 @@ const Login = () => {
                 <div className="form-input-icon-wrapper">
                   <Mail size={16} className="form-input-icon" />
                   <input
-                    type="email"
+                    type="text"
                     name="email"
                     className="form-input"
                     value={regData.email}
                     onChange={handleRegisterChange}
                     placeholder="Enter your email"
-                    required
+                    style={{ borderColor: regErrors.email ? '#ef4444' : '' }}
                   />
                 </div>
+                {regErrors.email && <span style={{ color: '#ef4444', fontSize: '0.72rem', marginTop: '0.2rem', display: 'block' }}>{regErrors.email}</span>}
               </div>
 
               <div className="form-group">
@@ -240,9 +297,7 @@ const Login = () => {
                       value={regData.password}
                       onChange={handleRegisterChange}
                       placeholder="Min 6 characters"
-                      minLength={6}
-                      required
-                      style={{ paddingRight: '3rem' }}
+                      style={{ paddingRight: '3rem', borderColor: regErrors.password ? '#ef4444' : '' }}
                     />
                   </div>
                   <button
@@ -264,6 +319,7 @@ const Login = () => {
                     {showRegPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
+                {regErrors.password && <span style={{ color: '#ef4444', fontSize: '0.72rem', marginTop: '0.2rem', display: 'block' }}>{regErrors.password}</span>}
                 {regData.password && (
                   <div className="password-strength">
                     <div className="password-strength-bar">
@@ -327,9 +383,9 @@ const Login = () => {
                       value={regData.semester}
                       onChange={handleRegisterChange}
                       placeholder="1-8"
-                      min={1}
-                      max={8}
+                      style={{ borderColor: regErrors.semester ? '#ef4444' : '' }}
                     />
+                    {regErrors.semester && <span style={{ color: '#ef4444', fontSize: '0.72rem', marginTop: '0.2rem', display: 'block' }}>{regErrors.semester}</span>}
                   </div>
                   <div className="form-group">
                     <label className="form-label">Section</label>
@@ -343,7 +399,7 @@ const Login = () => {
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Enrollment</label>
+                    <label className="form-label">Enrollment No.</label>
                     <input
                       type="text"
                       name="enrollmentNumber"
@@ -351,7 +407,9 @@ const Login = () => {
                       value={regData.enrollmentNumber}
                       onChange={handleRegisterChange}
                       placeholder="ID"
+                      style={{ borderColor: regErrors.enrollmentNumber ? '#ef4444' : '' }}
                     />
+                    {regErrors.enrollmentNumber && <span style={{ color: '#ef4444', fontSize: '0.72rem', marginTop: '0.2rem', display: 'block' }}>{regErrors.enrollmentNumber}</span>}
                   </div>
                 </div>
               )}

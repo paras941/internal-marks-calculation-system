@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { analyticsAPI } from '../services/api';
@@ -10,7 +10,12 @@ import {
   ArrowRight,
   BarChart3,
   Settings,
-  Clock
+  Clock,
+  ShieldCheck,
+  AlertTriangle,
+  Activity,
+  Sparkles,
+  CheckCircle2
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -33,6 +38,28 @@ const Dashboard = () => {
     }
   };
 
+  const classAverage = Number(stats?.classAverage || 0);
+  const approvalRate = Number(stats?.approvalRate || 0);
+  const marksByStatus = stats?.marksByStatus || {};
+  const recentActivity = stats?.recentActivity || [];
+
+  const riskFlags = useMemo(() => {
+    const flags = [];
+    if ((stats?.atRiskCount || 0) > 0) {
+      flags.push(`${stats.atRiskCount} attendance entries are below 75%`);
+    }
+    if ((stats?.pendingApprovals || 0) > 0) {
+      flags.push(`${stats.pendingApprovals} marks entries are pending final approval`);
+    }
+    if (classAverage > 0 && classAverage < 50) {
+      flags.push('Class average is below 50%, consider an intervention plan');
+    }
+    if (flags.length === 0) {
+      flags.push('No critical academic risks detected in current data window');
+    }
+    return flags;
+  }, [stats, classAverage]);
+
   if (loading) {
     return (
       <div className="loading">
@@ -46,8 +73,8 @@ const Dashboard = () => {
       label: 'Total Students',
       value: stats?.totalStudents || 0,
       icon: Users,
-      color: '#6366f1',
-      bg: '#eef2ff'
+      color: '#0f766e',
+      bg: '#ccfbf1'
     },
     {
       label: 'Total Subjects',
@@ -60,34 +87,63 @@ const Dashboard = () => {
       label: 'Marks Entered',
       value: stats?.marksEntered || 0,
       icon: ClipboardList,
-      color: '#f59e0b',
-      bg: '#fffbeb'
+      color: '#b45309',
+      bg: '#ffedd5'
     },
     {
       label: 'Class Average',
-      value: stats?.classAverage ? `${stats.classAverage.toFixed(1)}%` : 'N/A',
+      value: classAverage ? `${classAverage.toFixed(1)}%` : 'N/A',
       icon: TrendingUp,
-      color: '#8b5cf6',
-      bg: '#f5f3ff'
+      color: '#334155',
+      bg: '#e2e8f0'
     }
   ];
 
   const quickActions = [
-    { label: 'Enter Marks', href: '/marks', icon: ClipboardList, color: '#6366f1', bg: '#eef2ff' },
-    { label: 'Manage Schemes', href: '/schemes', icon: Settings, color: '#10b981', bg: '#ecfdf5' },
-    { label: 'View Analytics', href: '/analytics', icon: BarChart3, color: '#f59e0b', bg: '#fffbeb' }
+    { label: 'Enter Marks', href: '/marks', icon: ClipboardList, color: '#6366f1', bg: '#eef2ff', roles: ['admin', 'faculty', 'hod'] },
+    { label: 'Manage Schemes', href: '/schemes', icon: Settings, color: '#10b981', bg: '#ecfdf5', roles: ['admin', 'hod'] },
+    { label: 'View Analytics', href: '/analytics', icon: BarChart3, color: '#f59e0b', bg: '#fffbeb', roles: ['admin', 'faculty', 'hod'] }
+  ].filter((action) => action.roles.includes(user?.role));
+
+  const workflow = [
+    { label: 'Draft', value: marksByStatus.draft || 0, color: 'var(--warning-color)' },
+    { label: 'Calculated', value: marksByStatus.calculated || 0, color: '#2563eb' },
+    { label: 'Submitted', value: marksByStatus.submitted || 0, color: '#7c3aed' },
+    { label: 'Approved', value: marksByStatus.approved || 0, color: 'var(--success-color)' }
   ];
 
   return (
-    <div>
+    <div className="dashboard-shell">
       <div className="page-header">
         <h1>Welcome back, {user?.firstName}!</h1>
         <p style={{ color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-          Here's what's happening in your department.
+          Live academic performance, approval flow, and risk indicators in one place.
         </p>
       </div>
 
-      <div className="stats-grid">
+      <div className="dashboard-hero fade-up">
+        <div>
+          <div className="dashboard-hero-title">
+            <Sparkles size={18} />
+            Operational Snapshot
+          </div>
+          <p className="dashboard-hero-subtitle">
+            Approval rate is <strong>{approvalRate.toFixed(1)}%</strong> with <strong>{stats?.pendingApprovals || 0}</strong> pending items.
+          </p>
+        </div>
+        <div className="dashboard-hero-chips">
+          <div className="hero-chip">
+            <ShieldCheck size={16} />
+            Governance Ready
+          </div>
+          <div className="hero-chip">
+            <Activity size={16} />
+            Real-time Signals
+          </div>
+        </div>
+      </div>
+
+      <div className="stats-grid fade-up delay-1">
         {statCards.map((stat, index) => (
           <div key={index} className="stat-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -105,7 +161,41 @@ const Dashboard = () => {
 
       {user?.role !== 'student' && (
         <div className="grid-2">
-          <div className="card">
+          <div className="card fade-up delay-2">
+            <div className="card-header">
+              <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <CheckCircle2 size={18} style={{ color: 'var(--success-color)' }} />
+                Marks Workflow
+              </h3>
+            </div>
+            <div className="workflow-grid">
+              {workflow.map((item) => (
+                <div key={item.label} className="workflow-step">
+                  <div className="workflow-value" style={{ color: item.color }}>{item.value}</div>
+                  <div className="workflow-label">{item.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="card fade-up delay-2">
+            <div className="card-header">
+              <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <AlertTriangle size={18} style={{ color: 'var(--warning-color)' }} />
+                Risk Radar
+              </h3>
+            </div>
+            <div className="insight-list">
+              {riskFlags.map((flag) => (
+                <div key={flag} className="insight-item">
+                  <AlertTriangle size={14} />
+                  {flag}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="card fade-up delay-3">
             <div className="card-header">
               <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Clock size={18} style={{ color: 'var(--primary-color)' }} />
@@ -113,9 +203,9 @@ const Dashboard = () => {
               </h3>
             </div>
             <div>
-              {stats?.recentActivity?.length > 0 ? (
-                stats.recentActivity.map((activity, index) => (
-                  <div key={index} className="activity-item">
+              {recentActivity.length > 0 ? (
+                recentActivity.map((activity, index) => (
+                  <div key={`${activity.timestamp}-${index}`} className="activity-item">
                     <div className="activity-dot" />
                     <div className="activity-content">
                       <div className="activity-text">{activity.description}</div>
@@ -136,7 +226,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="card">
+          <div className="card fade-up delay-3">
             <div className="card-header">
               <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <ArrowRight size={18} style={{ color: 'var(--primary-color)' }} />
@@ -158,7 +248,7 @@ const Dashboard = () => {
       )}
 
       {user?.role === 'student' && (
-        <div className="card">
+        <div className="card fade-up delay-2">
           <div className="card-header">
             <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <BarChart3 size={18} style={{ color: 'var(--primary-color)' }} />
@@ -186,10 +276,22 @@ const Dashboard = () => {
                     borderRadius: 'var(--radius-md)',
                     textAlign: 'center'
                   }}>
-                    <div className="stat-label">Subjects</div>
+                    <div className="stat-label">Subjects Covered</div>
                     <div className="stat-value" style={{ color: '#10b981' }}>
                       {stats.studentSummary.subjects || 0}
                     </div>
+                  </div>
+                </div>
+                <div className="attendance-track">
+                  <div className="attendance-track-head">
+                    <span>Attendance Health</span>
+                    <strong>{(stats.studentSummary.attendance || 0).toFixed(1)}%</strong>
+                  </div>
+                  <div className="attendance-track-bar">
+                    <div
+                      className="attendance-track-fill"
+                      style={{ width: `${Math.min(100, stats.studentSummary.attendance || 0)}%` }}
+                    />
                   </div>
                 </div>
                 <Link to="/my-marks" className="btn btn-primary" style={{ width: '100%' }}>

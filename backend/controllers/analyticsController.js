@@ -292,27 +292,102 @@ exports.getDashboardStats = async (req, res) => {
   try {
     const stats = {};
 
-    // Total users by role
-    const userCounts = await User.aggregate([
-      { $group: { _id: '$role', count: { $sum: 1 } } }
+    const departmentScope = req.user.role === 'hod' && req.user.department
+      ? req.user.department
+      : null;
+    const isStudent = req.user.role === 'student';
+
+    const marksMatch = {};
+    const usersMatch = {};
+    const schemesMatch = { isActive: true };
+
+    if (departmentScope) {
+      marksMatch.department = departmentScope;
+      usersMatch.department = departmentScope;
+      schemesMatch.department = departmentScope;
+    }
+
+    if (isStudent) {
+      marksMatch.studentId = req.user._id;
+    }
+
+    const [
+      userCounts,
+      subjectCount,
+      marksEntries,
+      marksAverage,
+      marksStatus,
+      recentMarks,
+      lowAttendanceCount,
+      distinctMarksSubjects
+    ] = await Promise.all([
+      User.aggregate([
+        { $match: usersMatch },
+        { $group: { _id: '$role', count: { $sum: 1 } } }
+      ]),
+      EvaluationScheme.countDocuments(schemesMatch),
+      StudentMarks.countDocuments(marksMatch),
+      StudentMarks.aggregate([
+        { $match: marksMatch },
+        { $group: { _id: null, avgFinalMarks: { $avg: '$finalMarks' } } }
+      ]),
+      StudentMarks.aggregate([
+        { $match: marksMatch },
+        { $group: { _id: '$status', count: { $sum: 1 } } }
+      ]),
+      StudentMarks.find(marksMatch)
+        .populate('studentId', 'firstName lastName')
+        .populate('subjectId', 'subjectCode subjectName')
+        .sort({ updatedAt: -1 })
+        .limit(6),
+      isStudent
+        ? Attendance.countDocuments({ studentId: req.user._id, percentage: { $lt: 75 } })
+        : Attendance.countDocuments({ percentage: { $lt: 75 } }),
+      StudentMarks.distinct('subjectId', marksMatch)
     ]);
+
     stats.users = userCounts.reduce((acc, curr) => {
       acc[curr._id] = curr.count;
       return acc;
     }, {});
+    stats.subjects = subjectCount;
+    stats.marksEntries = marksEntries;
+    stats.recentMarks = recentMarks;
 
-    // Total subjects
-    stats.subjects = await EvaluationScheme.countDocuments({ isActive: true });
+    // Backward-compatible + normalized metrics for dashboard cards.
+    stats.totalStudents = stats.users.student || 0;
+    stats.totalSubjects = subjectCount;
+    stats.marksEntered = marksEntries;
+    stats.classAverage = marksAverage[0]?.avgFinalMarks || 0;
+    stats.atRiskCount = lowAttendanceCount;
 
-    // Total marks entries
-    stats.marksEntries = await StudentMarks.countDocuments();
+    stats.marksByStatus = marksStatus.reduce((acc, entry) => {
+      acc[entry._id] = entry.count;
+      return acc;
+    }, { draft: 0, calculated: 0, submitted: 0, approved: 0 });
 
-    // Recent activity
-    stats.recentMarks = await StudentMarks.find()
-      .populate('studentId', 'firstName lastName')
-      .populate('subjectId', 'subjectCode')
-      .sort({ updatedAt: -1 })
-      .limit(5);
+    const approved = stats.marksByStatus.approved || 0;
+    stats.approvalRate = marksEntries > 0 ? (approved / marksEntries) * 100 : 0;
+    stats.pendingApprovals = Math.max(marksEntries - approved, 0);
+
+    // Student-focused summary card.
+    if (isStudent) {
+      const avgAttendance = await Attendance.aggregate([
+        { $match: { studentId: req.user._id } },
+        { $group: { _id: null, percentage: { $avg: '$percentage' } } }
+      ]);
+
+      stats.studentSummary = {
+        average: stats.classAverage,
+        subjects: distinctMarksSubjects.length,
+        attendance: avgAttendance[0]?.percentage || 0
+      };
+    }
+
+    stats.recentActivity = recentMarks.map((entry) => ({
+      description: `${entry.studentId?.firstName || 'Student'} ${entry.studentId?.lastName || ''} • ${entry.subjectId?.subjectCode || 'Subject'} marks ${entry.status}`.trim(),
+      timestamp: entry.updatedAt
+    }));
 
     res.status(200).json({
       success: true,
