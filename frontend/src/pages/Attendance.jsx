@@ -7,6 +7,7 @@ const Attendance = () => {
   const [schemes, setSchemes] = useState([]);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [filters, setFilters] = useState({ subjectId: '', month: '', year: '' });
   const [formData, setFormData] = useState({
@@ -148,6 +149,7 @@ const Attendance = () => {
         records: validRecords
       };
 
+      setIsSaving(true);
       const response = await attendanceAPI.bulkCreate(payload);
       const { success = [], errors = [] } = response.data?.data || {};
 
@@ -160,12 +162,29 @@ const Attendance = () => {
     } catch (error) {
       console.error('Error saving attendance:', error);
       alert(error.response?.data?.message || 'Error saving attendance');
+    } finally {
+      setIsSaving(false);
     }
+  };
+
+  const markAllPresent = () => {
+    const newRecords = formData.records.map((record) => ({
+      ...record,
+      attendedClasses: record.totalClasses
+    }));
+
+    setFormData({ ...formData, records: newRecords });
   };
 
   const updateRecord = (index, field, value) => {
     const newRecords = [...formData.records];
-    newRecords[index] = { ...newRecords[index], [field]: value };
+    const updatedRecord = { ...newRecords[index], [field]: value };
+
+    if (field === 'totalClasses' && updatedRecord.attendedClasses > updatedRecord.totalClasses) {
+      updatedRecord.attendedClasses = updatedRecord.totalClasses;
+    }
+
+    newRecords[index] = updatedRecord;
     setFormData({ ...formData, records: newRecords });
   };
 
@@ -301,15 +320,20 @@ const Attendance = () => {
 
       {/* Attendance Entry Modal */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+        <div className="modal-overlay" onClick={() => !isSaving && setShowModal(false)}>
           <div className="modal" style={{ maxWidth: '800px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2 className="modal-title">Mark Attendance - {months[formData.month - 1]} {formData.year}</h2>
-              <button className="btn btn-secondary btn-sm" onClick={() => setShowModal(false)}>
+              <button className="btn btn-secondary btn-sm" onClick={() => setShowModal(false)} disabled={isSaving}>
                 <X size={20} />
               </button>
             </div>
             <form onSubmit={handleSubmit}>
+              <div style={{ marginBottom: '0.75rem' }}>
+                <button type="button" className="btn btn-secondary" onClick={markAllPresent} disabled={isSaving}>
+                  Mark All Present
+                </button>
+              </div>
               <div className="table-container" style={{ maxHeight: '400px', overflowY: 'auto' }}>
                 <table className="table">
                   <thead>
@@ -333,6 +357,7 @@ const Attendance = () => {
                             onChange={(e) => updateRecord(index, 'totalClasses', parseInt(e.target.value) || 0)}
                             min={0}
                             style={{ width: '80px' }}
+                            disabled={isSaving}
                           />
                         </td>
                         <td>
@@ -344,6 +369,7 @@ const Attendance = () => {
                             min={0}
                             max={record.totalClasses}
                             style={{ width: '80px' }}
+                            disabled={isSaving}
                           />
                         </td>
                       </tr>
@@ -352,10 +378,10 @@ const Attendance = () => {
                 </table>
               </div>
               <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                <button type="submit" className="btn btn-primary">
-                  <Save size={20} /> Save Attendance
+                <button type="submit" className="btn btn-primary" disabled={isSaving}>
+                  <Save size={20} /> {isSaving ? 'Saving...' : 'Save Attendance'}
                 </button>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)} disabled={isSaving}>
                   Cancel
                 </button>
               </div>
