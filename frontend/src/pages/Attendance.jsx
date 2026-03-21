@@ -23,7 +23,7 @@ const Attendance = () => {
 
   useEffect(() => {
     if (filters.subjectId && filters.month && filters.year) {
-      fetchAttendance();
+      fetchAttendance(filters);
     }
   }, [filters]);
 
@@ -36,19 +36,23 @@ const Attendance = () => {
     }
   };
 
-  const fetchStudents = async () => {
+  const fetchStudents = async (params = {}) => {
     try {
-      const response = await usersAPI.getStudents({});
+      const response = await usersAPI.getStudents(params);
       setStudents(response.data.data);
     } catch (error) {
       console.error('Error fetching students:', error);
     }
   };
 
-  const fetchAttendance = async () => {
+  const fetchAttendance = async (queryFilters = filters) => {
     setLoading(true);
     try {
-      const response = await attendanceAPI.getAll(filters);
+      const response = await attendanceAPI.getAll({
+        subjectId: queryFilters.subjectId,
+        month: parseInt(queryFilters.month),
+        year: parseInt(queryFilters.year)
+      });
       setAttendance(response.data.data);
     } catch (error) {
       console.error('Error fetching attendance:', error);
@@ -58,32 +62,101 @@ const Attendance = () => {
   };
 
   const handleSubjectChange = (subjectId) => {
+    const selectedScheme = schemes.find((scheme) => scheme._id === subjectId);
+
     setFilters({ ...filters, subjectId });
+    setAttendance([]);
+
+    if (selectedScheme) {
+      fetchStudents({
+        department: selectedScheme.department,
+        semester: selectedScheme.semester
+      });
+    } else {
+      fetchStudents({});
+    }
+
     setFormData({
       ...formData,
       subjectId,
-      records: students.map(student => ({
+      month: filters.month ? parseInt(filters.month) : formData.month,
+      year: filters.year ? parseInt(filters.year) : formData.year,
+      records: []
+    });
+  };
+
+  const openAttendanceModal = () => {
+    if (!filters.subjectId) {
+      alert('Please select a subject first.');
+      return;
+    }
+
+    const month = filters.month ? parseInt(filters.month) : new Date().getMonth() + 1;
+    const year = filters.year ? parseInt(filters.year) : new Date().getFullYear();
+
+    if (!filters.month || !filters.year) {
+      setFilters((prev) => ({
+        ...prev,
+        month: String(month),
+        year: String(year)
+      }));
+    }
+
+    const records = students.map(student => {
+      const existing = attendance.find(
+        record => record.studentId?._id === student._id
+      );
+
+      return {
         studentId: student._id,
         studentName: `${student.firstName} ${student.lastName}`,
         enrollmentNumber: student.enrollmentNumber || '',
-        totalClasses: 0,
-        attendedClasses: 0
-      }))
+        totalClasses: existing?.totalClasses || 0,
+        attendedClasses: existing?.attendedClasses || 0
+      };
     });
+
+    setFormData({
+      subjectId: filters.subjectId,
+      month,
+      year,
+      records
+    });
+
+    setShowModal(true);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const validRecords = formData.records.filter(r => r.totalClasses > 0);
-      await attendanceAPI.bulkCreate({
-        subjectId: formData.subjectId,
-        month: parseInt(formData.month),
-        year: parseInt(formData.year),
+      if (validRecords.length === 0) {
+        alert('Enter total classes for at least one student before saving.');
+        return;
+      }
+
+      const invalidRecord = validRecords.find(r => r.attendedClasses > r.totalClasses);
+      if (invalidRecord) {
+        alert(`Invalid attendance for ${invalidRecord.studentName}: attended classes cannot be greater than total classes.`);
+        return;
+      }
+
+      const payload = {
+        subjectId: filters.subjectId,
+        month: parseInt(filters.month),
+        year: parseInt(filters.year),
         records: validRecords
-      });
+      };
+
+      const response = await attendanceAPI.bulkCreate(payload);
+      const { success = [], errors = [] } = response.data?.data || {};
+
+      if (errors.length > 0) {
+        alert(`Attendance saved for ${success.length} student(s), but ${errors.length} failed. Please retry failed records.`);
+      }
+
+      await fetchAttendance(payload);
       setShowModal(false);
-      fetchAttendance();
     } catch (error) {
       console.error('Error saving attendance:', error);
       alert(error.response?.data?.message || 'Error saving attendance');
@@ -102,6 +175,22 @@ const Attendance = () => {
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
+
+  const attendanceByStudentId = attendance.reduce((acc, record) => {
+    const id = record?.studentId?._id || record?.studentId;
+    if (id) {
+      acc[id] = record;
+    }
+    return acc;
+  }, {});
+
+  const rowsToDisplay = students.map((student) => {
+    const record = attendanceByStudentId[student._id];
+    return {
+      student,
+      record
+    };
+  });
 
   return (
     <div>
@@ -148,8 +237,8 @@ const Attendance = () => {
               ))}
             </select>
           </div>
-          {filters.subjectId && filters.month && filters.year && (
-            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+          {filters.subjectId && (
+            <button className="btn btn-primary" onClick={openAttendanceModal}>
               <Plus size={20} /> Mark Attendance
             </button>
           )}
@@ -158,7 +247,13 @@ const Attendance = () => {
         {loading ? (
           <div className="loading"><div className="spinner"></div></div>
         ) : filters.subjectId && filters.month && filters.year ? (
-          <div className="table-container">
+          <>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+              <span className="badge badge-success">Present (&gt;= 75%)</span>
+              <span className="badge badge-danger">Short (&lt; 75%)</span>
+              <span className="badge badge-warning">Attendance Not Found (Not Submitted)</span>
+            </div>
+            <div className="table-container">
             <table className="table">
               <thead>
                 <tr>
@@ -171,29 +266,34 @@ const Attendance = () => {
                 </tr>
               </thead>
               <tbody>
-                {attendance.length > 0 ? attendance.map(record => (
-                  <tr key={record._id}>
-                    <td>{record.studentId?.firstName} {record.studentId?.lastName}</td>
-                    <td>{record.studentId?.enrollmentNumber || '-'}</td>
-                    <td>{record.totalClasses}</td>
-                    <td>{record.attendedClasses}</td>
-                    <td>{record.percentage}%</td>
+                {rowsToDisplay.length > 0 ? rowsToDisplay.map(({ student, record }) => (
+                  <tr key={student._id}>
+                    <td>{student.firstName} {student.lastName}</td>
+                    <td>{student.enrollmentNumber || '-'}</td>
+                    <td>{record ? record.totalClasses : '-'}</td>
+                    <td>{record ? record.attendedClasses : '-'}</td>
+                    <td>{record ? `${record.percentage}%` : 'Attendance Not Found'}</td>
                     <td>
-                      <span className={`badge badge-${record.percentage >= 75 ? 'success' : 'danger'}`}>
-                        {record.percentage >= 75 ? 'Present' : 'Short'}
-                      </span>
+                      {record ? (
+                        <span className={`badge badge-${record.percentage >= 75 ? 'success' : 'danger'}`}>
+                          {record.percentage >= 75 ? 'Present' : 'Short'}
+                        </span>
+                      ) : (
+                        <span className="badge badge-warning">Attendance Not Found</span>
+                      )}
                     </td>
                   </tr>
                 )) : (
                   <tr>
                     <td colSpan="6" style={{ textAlign: 'center' }}>
-                      No attendance records found
+                      No students found for selected subject
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
-          </div>
+            </div>
+          </>
         ) : (
           <div className="empty-state">Please select subject, month, and year to view attendance</div>
         )}

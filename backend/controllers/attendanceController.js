@@ -62,19 +62,37 @@ exports.getAttendance = async (req, res) => {
 exports.createAttendance = async (req, res) => {
   try {
     const { studentId, subjectId, totalClasses, attendedClasses, month, year } = req.body;
+    const total = parseInt(totalClasses);
+    const attended = parseInt(attendedClasses);
+    const parsedMonth = parseInt(month);
+    const parsedYear = parseInt(year);
+
+    if (!Number.isInteger(total) || total < 0 || !Number.isInteger(attended) || attended < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Total classes and attended classes must be non-negative integers'
+      });
+    }
+
+    if (attended > total) {
+      return res.status(400).json({
+        success: false,
+        message: 'Attended classes cannot be greater than total classes'
+      });
+    }
 
     // Check if attendance already exists
     const existingAttendance = await Attendance.findOne({
       studentId,
       subjectId,
-      month: parseInt(month),
-      year: parseInt(year)
+      month: parsedMonth,
+      year: parsedYear
     });
 
     if (existingAttendance) {
       // Update existing
-      existingAttendance.totalClasses = totalClasses;
-      existingAttendance.attendedClasses = attendedClasses;
+      existingAttendance.totalClasses = total;
+      existingAttendance.attendedClasses = attended;
       existingAttendance.markedBy = req.user._id;
       await existingAttendance.save();
 
@@ -99,10 +117,10 @@ exports.createAttendance = async (req, res) => {
     const attendance = await Attendance.create({
       studentId,
       subjectId,
-      totalClasses,
-      attendedClasses,
-      month: parseInt(month),
-      year: parseInt(year),
+      totalClasses: total,
+      attendedClasses: attended,
+      month: parsedMonth,
+      year: parsedYear,
       markedBy: req.user._id
     });
 
@@ -136,6 +154,15 @@ exports.createAttendance = async (req, res) => {
 exports.bulkCreateAttendance = async (req, res) => {
   try {
     const { subjectId, month, year, records } = req.body;
+    const parsedMonth = parseInt(month);
+    const parsedYear = parseInt(year);
+
+    if (!Array.isArray(records) || records.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one attendance record is required'
+      });
+    }
 
     const results = {
       success: [],
@@ -145,28 +172,42 @@ exports.bulkCreateAttendance = async (req, res) => {
     for (const record of records) {
       try {
         const { studentId, totalClasses, attendedClasses } = record;
+        const total = parseInt(totalClasses);
+        const attended = parseInt(attendedClasses);
+
+        if (!studentId) {
+          throw new Error('Missing studentId');
+        }
+
+        if (!Number.isInteger(total) || total < 0 || !Number.isInteger(attended) || attended < 0) {
+          throw new Error('Total classes and attended classes must be non-negative integers');
+        }
+
+        if (attended > total) {
+          throw new Error('Attended classes cannot be greater than total classes');
+        }
 
         // Check if attendance exists
         let attendance = await Attendance.findOne({
           studentId,
           subjectId,
-          month: parseInt(month),
-          year: parseInt(year)
+          month: parsedMonth,
+          year: parsedYear
         });
 
         if (attendance) {
-          attendance.totalClasses = totalClasses;
-          attendance.attendedClasses = attendedClasses;
+          attendance.totalClasses = total;
+          attendance.attendedClasses = attended;
           attendance.markedBy = req.user._id;
           await attendance.save();
         } else {
           attendance = await Attendance.create({
             studentId,
             subjectId,
-            totalClasses,
-            attendedClasses,
-            month: parseInt(month),
-            year: parseInt(year),
+            totalClasses: total,
+            attendedClasses: attended,
+            month: parsedMonth,
+            year: parsedYear,
             markedBy: req.user._id
           });
         }
