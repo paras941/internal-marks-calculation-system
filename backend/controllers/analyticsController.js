@@ -18,8 +18,6 @@ exports.getClassAverage = async (req, res) => {
 
     if (department) {
       matchQuery.department = department;
-    } else if (req.user.role === 'hod') {
-      matchQuery.department = req.user.department;
     }
 
     if (semester) {
@@ -88,8 +86,6 @@ exports.getSubjectPerformance = async (req, res) => {
 
     if (department) {
       matchQuery.department = department;
-    } else if (req.user.role === 'hod') {
-      matchQuery.department = req.user.department;
     }
 
     if (semester) {
@@ -292,9 +288,7 @@ exports.getDashboardStats = async (req, res) => {
   try {
     const stats = {};
 
-    const departmentScope = req.user.role === 'hod' && req.user.department
-      ? req.user.department
-      : null;
+    const departmentScope = null;
     const isStudent = req.user.role === 'student';
 
     const marksMatch = {};

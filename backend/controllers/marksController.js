@@ -3,7 +3,7 @@ const EvaluationScheme = require('../models/EvaluationScheme');
 const User = require('../models/User');
 const AuditLog = require('../models/AuditLog');
 const { calculateMarks, recalculateAllMarks } = require('../utils/calculationEngine');
-const { processBulkMarksUpload, parseCSV } = require('../utils/csvParser');
+const { processBulkMarksUpload, parseCSV, generateCSVTemplate } = require('../utils/csvParser');
 const fs = require('fs');
 
 // @desc    Get all marks
@@ -28,8 +28,6 @@ exports.getMarks = async (req, res) => {
 
     if (department) {
       query.department = department;
-    } else if (req.user.role === 'hod') {
-      query.department = req.user.department;
     }
 
     if (semester) {
@@ -124,6 +122,40 @@ exports.createMarks = async (req, res) => {
       });
     }
 
+    // Validate marks array
+    if (!Array.isArray(marks) || marks.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Marks array is required and cannot be empty'
+      });
+    }
+
+    // Validate each mark component
+    for (const mark of marks) {
+      const component = scheme.components.find(c => c._id.toString() === mark.componentId?.toString());
+      if (!component) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid component ID: ${mark.componentId}`
+        });
+      }
+
+      if (!mark.isAbsent && mark.marksObtained > component.maxMarks) {
+        return res.status(400).json({
+          success: false,
+          message: `Marks obtained (${mark.marksObtained}) cannot exceed max marks (${component.maxMarks}) for ${component.name}`
+        });
+      }
+    }
+
+    // Validate grace marks
+    if (graceMarksApplied && (graceMarksApplied < 0 || graceMarksApplied > 10)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Grace marks must be between 0 and 10'
+      });
+    }
+
     // Check if marks already exist
     let studentMarks = await StudentMarks.findOne({
       studentId,
@@ -155,7 +187,7 @@ exports.createMarks = async (req, res) => {
 
     // Calculate marks
     const calculated = await calculateMarks(studentMarks, scheme);
-    
+
     studentMarks.marks = marks;
     studentMarks.totalMarks = calculated.totalMarks;
     studentMarks.weightedMarks = calculated.weightedMarks;
@@ -212,6 +244,42 @@ exports.updateMarks = async (req, res) => {
     const oldValue = studentMarks.toObject();
     const scheme = studentMarks.subjectId;
 
+    // Validate marks if provided
+    if (marks) {
+      if (!Array.isArray(marks) || marks.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Marks array is required and cannot be empty'
+        });
+      }
+
+      // Validate each mark component
+      for (const mark of marks) {
+        const component = scheme.components.find(c => c._id.toString() === mark.componentId?.toString());
+        if (!component) {
+          return res.status(400).json({
+            success: false,
+            message: `Invalid component ID: ${mark.componentId}`
+          });
+        }
+
+        if (!mark.isAbsent && mark.marksObtained > component.maxMarks) {
+          return res.status(400).json({
+            success: false,
+            message: `Marks obtained (${mark.marksObtained}) cannot exceed max marks (${component.maxMarks}) for ${component.name}`
+          });
+        }
+      }
+    }
+
+    // Validate grace marks
+    if (graceMarksApplied !== undefined && (graceMarksApplied < 0 || graceMarksApplied > 10)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Grace marks must be between 0 and 10'
+      });
+    }
+
     // Update fields
     if (marks) {
       studentMarks.marks = marks;
@@ -225,7 +293,7 @@ exports.updateMarks = async (req, res) => {
 
     // Recalculate marks
     const calculated = await calculateMarks(studentMarks, scheme);
-    
+
     studentMarks.totalMarks = calculated.totalMarks;
     studentMarks.weightedMarks = calculated.weightedMarks;
     studentMarks.attendanceBonus = calculated.attendanceBonus;
@@ -336,7 +404,13 @@ exports.bulkUploadMarks = async (req, res) => {
     const results = await processBulkMarksUpload(csvData, subjectId, req.user._id);
 
     // Clean up uploaded file
-    fs.unlinkSync(req.file.path);
+    if (req.file?.path) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (unlinkError) {
+        console.error('Error deleting uploaded file:', unlinkError);
+      }
+    }
 
     // Create audit log
     await AuditLog.create({
@@ -355,8 +429,12 @@ exports.bulkUploadMarks = async (req, res) => {
   } catch (error) {
     console.error(error);
     // Clean up file if exists
-    if (req.file && req.file.path) {
-      fs.unlinkSync(req.file.path);
+    if (req.file?.path) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (unlinkError) {
+        console.error('Error deleting uploaded file:', unlinkError);
+      }
     }
     res.status(500).json({
       success: false,
@@ -438,6 +516,87 @@ exports.approveMarks = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error approving marks'
+    });
+  }
+};
+
+// @desc    Submit marks for approval
+// @route   PUT /api/marks/submit/:id
+// @access  Private (Faculty, Admin)
+exports.submitMarks = async (req, res) => {
+  try {
+    const studentMarks = await StudentMarks.findById(req.params.id);
+
+    if (!studentMarks) {
+      return res.status(404).json({
+        success: false,
+        message: 'Marks record not found'
+      });
+    }
+
+    if (studentMarks.status === 'approved') {
+      return res.status(400).json({
+        success: false,
+        message: 'Marks are already approved'
+      });
+    }
+
+    const oldValue = studentMarks.toObject();
+
+    studentMarks.status = 'submitted';
+
+    await studentMarks.save();
+
+    // Create audit log
+    await AuditLog.create({
+      userId: req.user._id,
+      action: 'UPDATE',
+      entityType: 'STUDENT_MARKS',
+      entityId: studentMarks._id,
+      oldValue,
+      newValue: studentMarks.toObject(),
+      description: 'Submitted marks for approval',
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+
+    res.status(200).json({
+      success: true,
+      data: studentMarks
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'Error submitting marks'
+    });
+  }
+};
+
+// @desc    Get CSV template for marks upload
+// @route   GET /api/marks/template/:subjectId
+// @access  Private
+exports.getCSVTemplate = async (req, res) => {
+  try {
+    const scheme = await EvaluationScheme.findById(req.params.subjectId);
+
+    if (!scheme) {
+      return res.status(404).json({
+        success: false,
+        message: 'Evaluation scheme not found'
+      });
+    }
+
+    const csvContent = generateCSVTemplate(scheme);
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${scheme.subjectCode}_marks_template.csv"`);
+    res.status(200).send(csvContent);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'Error generating template'
     });
   }
 };

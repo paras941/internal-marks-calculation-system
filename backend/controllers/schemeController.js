@@ -12,8 +12,6 @@ exports.getSchemes = async (req, res) => {
 
     if (department) {
       query.department = department;
-    } else if (req.user.role === 'hod') {
-      query.department = req.user.department;
     }
 
     if (semester) {
@@ -258,8 +256,6 @@ exports.getMySubjects = async (req, res) => {
     // For faculty, get assigned subjects
     if (user.role === 'faculty' && user.assignedSubjects && user.assignedSubjects.length > 0) {
       query._id = { $in: user.assignedSubjects };
-    } else if (user.role === 'hod') {
-      query.department = user.department;
     }
 
     const schemes = await EvaluationScheme.find(query)
