@@ -8,7 +8,8 @@ exports.getSchemes = async (req, res) => {
   try {
     const { department, semester, section, subjectCode, isActive } = req.query;
 
-    let query = {};
+    // By default, only show active schemes (exclude deleted ones)
+    let query = { isActive: true };
 
     if (department) {
       query.department = department;
@@ -22,8 +23,9 @@ exports.getSchemes = async (req, res) => {
       query.subjectCode = { $regex: subjectCode, $options: 'i' };
     }
 
-    if (isActive !== undefined) {
-      query.isActive = isActive === 'true';
+    // Allow explicit query to show inactive schemes if needed
+    if (isActive === 'false') {
+      query.isActive = false;
     }
 
     const schemes = await EvaluationScheme.find(query)
@@ -208,7 +210,7 @@ exports.updateScheme = async (req, res) => {
 // @access  Private (Admin only)
 exports.deleteScheme = async (req, res) => {
   try {
-    const scheme = await EvaluationScheme.findById(req.params.id);
+    let scheme = await EvaluationScheme.findById(req.params.id);
 
     if (!scheme) {
       return res.status(404).json({
@@ -218,14 +220,19 @@ exports.deleteScheme = async (req, res) => {
     }
 
     const subjectCode = scheme.subjectCode;
+    const oldValue = scheme.toObject();
 
-    await scheme.deleteOne();
+    // Soft delete: mark as inactive instead of hard delete
+    scheme.isActive = false;
+    await scheme.save();
 
     await AuditLog.create({
       userId: req.user._id,
       action: 'DELETE',
       entityType: 'EVALUATION_SCHEME',
       entityId: req.params.id,
+      oldValue,
+      newValue: scheme.toObject(),
       description: `Deleted evaluation scheme: ${subjectCode}`,
       ipAddress: req.ip,
       userAgent: req.get('User-Agent')

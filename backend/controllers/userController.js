@@ -8,7 +8,8 @@ exports.getUsers = async (req, res) => {
   try {
     const { role, department, semester, section, search, page = 1, limit = 10 } = req.query;
 
-    let query = {};
+    // By default, only show active users (exclude deleted ones)
+    let query = { isActive: true };
 
     if (role) {
       query.role = role;
@@ -16,8 +17,6 @@ exports.getUsers = async (req, res) => {
 
     if (department) {
       query.department = department;
-    } else if (req.user.role === 'hod') {
-      query.department = req.user.department;
     }
 
     if (semester) {
@@ -155,10 +154,11 @@ exports.updateUser = async (req, res) => {
 
 // @desc    Delete user
 // @route   DELETE /api/users/:id
-// @access  Private (Admin only)
+// @access  Private (Admin, HOD)
 exports.deleteUser = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
+    console.log('Delete user request:', req.params.id, 'by user:', req.user._id);
+    let user = await User.findById(req.params.id);
 
     if (!user) {
       return res.status(404).json({
@@ -175,14 +175,21 @@ exports.deleteUser = async (req, res) => {
     }
 
     const userEmail = user.email;
+    const oldValue = user.toObject();
 
-    await user.deleteOne();
+    // Soft delete: mark as inactive instead of hard delete
+    user.isActive = false;
+    await user.save();
+
+    console.log('User deleted successfully:', userEmail);
 
     await AuditLog.create({
       userId: req.user._id,
       action: 'DELETE',
       entityType: 'USER',
       entityId: user._id,
+      oldValue,
+      newValue: user.toObject(),
       description: `Deleted user: ${userEmail}`,
       ipAddress: req.ip,
       userAgent: req.get('User-Agent')
@@ -193,7 +200,7 @@ exports.deleteUser = async (req, res) => {
       message: 'User deleted successfully'
     });
   } catch (error) {
-    console.error(error);
+    console.error('Error in deleteUser:', error);
     res.status(500).json({
       success: false,
       message: 'Error deleting user'
@@ -208,14 +215,15 @@ exports.getStudents = async (req, res) => {
   try {
     const { department, semester, section } = req.query;
 
-    let query = { role: 'student' };
+    // Include legacy users where isActive may be missing, but exclude explicitly deactivated users
+    let query = { role: 'student', isActive: { $ne: false } };
 
     if (department) {
       query.department = department;
     }
 
     if (semester) {
-      query.semester = semester;
+      query.semester = parseInt(semester);
     }
 
     if (section) {
@@ -244,11 +252,7 @@ exports.getStudents = async (req, res) => {
 // @access  Private (Admin, HOD)
 exports.getFaculty = async (req, res) => {
   try {
-    let query = { role: { $in: ['faculty', 'hod'] } };
-
-    if (req.user.role === 'hod') {
-      query.department = req.user.department;
-    }
+    let query = { role: { $in: ['faculty', 'hod'] }, isActive: true };
 
     const faculty = await User.find(query)
       .select('-password')

@@ -63,19 +63,10 @@ const Attendance = () => {
   };
 
   const handleSubjectChange = (subjectId) => {
-    const selectedScheme = schemes.find((scheme) => scheme._id === subjectId);
-
     setFilters({ ...filters, subjectId });
     setAttendance([]);
 
-    if (selectedScheme) {
-      fetchStudents({
-        department: selectedScheme.department,
-        semester: selectedScheme.semester
-      });
-    } else {
-      fetchStudents({});
-    }
+    fetchStudents({});
 
     setFormData({
       ...formData,
@@ -130,6 +121,9 @@ const Attendance = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const selectedMonth = parseInt(formData.month);
+      const selectedYear = parseInt(formData.year);
+
       const validRecords = formData.records.filter(r => r.totalClasses > 0);
       if (validRecords.length === 0) {
         alert('Enter total classes for at least one student before saving.');
@@ -144,8 +138,8 @@ const Attendance = () => {
 
       const payload = {
         subjectId: filters.subjectId,
-        month: parseInt(filters.month),
-        year: parseInt(filters.year),
+        month: selectedMonth,
+        year: selectedYear,
         records: validRecords
       };
 
@@ -157,7 +151,18 @@ const Attendance = () => {
         alert(`Attendance saved for ${success.length} student(s), but ${errors.length} failed. Please retry failed records.`);
       }
 
-      await fetchAttendance(payload);
+      // Keep filters in sync with the saved month/year so the table refreshes immediately.
+      setFilters((prev) => ({
+        ...prev,
+        month: String(selectedMonth),
+        year: String(selectedYear)
+      }));
+
+      await fetchAttendance({
+        subjectId: filters.subjectId,
+        month: selectedMonth,
+        year: selectedYear
+      });
       setShowModal(false);
     } catch (error) {
       console.error('Error saving attendance:', error);
@@ -198,13 +203,13 @@ const Attendance = () => {
   const attendanceByStudentId = attendance.reduce((acc, record) => {
     const id = record?.studentId?._id || record?.studentId;
     if (id) {
-      acc[id] = record;
+      acc[String(id)] = record;
     }
     return acc;
   }, {});
 
   const rowsToDisplay = students.map((student) => {
-    const record = attendanceByStudentId[student._id];
+    const record = attendanceByStudentId[String(student._id)];
     return {
       student,
       record
