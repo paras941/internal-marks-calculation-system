@@ -13,6 +13,6 @@ router.get('/students', authorize('admin', 'faculty', 'hod'), getStudents);
 router.get('/faculty', authorize('admin', 'hod'), getFaculty);
 router.get('/:id', [param('id').isMongoId().withMessage('Invalid user ID')], validate, getUser);
 router.put('/:id', [param('id').isMongoId().withMessage('Invalid user ID')], validate, authorize('admin', 'hod'), updateUser);
-router.delete('/:id', [param('id').isMongoId().withMessage('Invalid user ID')], validate, authorize('admin'), deleteUser);
+router.delete('/:id', [param('id').isMongoId().withMessage('Invalid user ID')], validate, authorize('admin', 'hod'), deleteUser);
 
 module.exports = router;

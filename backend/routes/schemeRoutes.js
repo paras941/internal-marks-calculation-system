@@ -13,6 +13,6 @@ router.get('/faculty/my-subjects', authorize('admin', 'faculty', 'hod'), getMySu
 router.get('/:id', [param('id').isMongoId().withMessage('Invalid scheme ID')], validate, getScheme);
 router.post('/', authorize('admin', 'hod'), createScheme);
 router.put('/:id', [param('id').isMongoId().withMessage('Invalid scheme ID')], validate, authorize('admin', 'hod'), updateScheme);
-router.delete('/:id', [param('id').isMongoId().withMessage('Invalid scheme ID')], validate, authorize('admin'), deleteScheme);
+router.delete('/:id', [param('id').isMongoId().withMessage('Invalid scheme ID')], validate, authorize('admin', 'hod'), deleteScheme);
 
 module.exports = router;
