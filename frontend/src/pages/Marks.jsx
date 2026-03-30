@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { marksAPI, schemesAPI, usersAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Edit, Upload, X, Save, FileText } from 'lucide-react';
+import { Plus, Edit, Upload, X, Save, FileText, Download, Send, CheckCircle } from 'lucide-react';
 
 const Marks = () => {
   const { user } = useAuth();
@@ -17,17 +17,18 @@ const Marks = () => {
   const [formData, setFormData] = useState({
     studentId: '',
     subjectId: '',
-    marks: []
+    marks: [],
+    graceMarksApplied: 0
   });
 
   useEffect(() => {
     fetchSchemes();
-    fetchStudents();
   }, []);
 
   useEffect(() => {
     if (filters.subjectId) {
       fetchMarks();
+      fetchStudentsForSubject();
     }
   }, [filters]);
 
@@ -40,7 +41,7 @@ const Marks = () => {
     }
   };
 
-  const fetchStudents = async () => {
+  const fetchStudentsForSubject = async () => {
     try {
       const response = await usersAPI.getStudents({});
       setStudents(response.data.data);
@@ -64,11 +65,12 @@ const Marks = () => {
   const handleSubjectChange = (subjectId) => {
     const scheme = schemes.find(s => s._id === subjectId);
     setFilters({ ...filters, subjectId });
-    
+
     if (scheme) {
       setFormData({
         studentId: '',
         subjectId,
+        graceMarksApplied: 0,
         marks: scheme.components.map(comp => ({
           componentName: comp.name,
           componentId: comp._id,
@@ -83,6 +85,26 @@ const Marks = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validation
+    if (!formData.studentId) {
+      alert('Please select a student');
+      return;
+    }
+
+    // Check if at least one mark is entered
+    const hasMarksEntered = formData.marks.some(m => m.marksObtained > 0 || m.isAbsent);
+    if (!hasMarksEntered) {
+      alert('Please enter marks for at least one component or mark as absent');
+      return;
+    }
+
+    // Check grace marks range
+    if (formData.graceMarksApplied < 0 || formData.graceMarksApplied > 10) {
+      alert('Grace marks must be between 0 and 10');
+      return;
+    }
+
     try {
       if (editingMarks) {
         await marksAPI.update(editingMarks._id, formData);
@@ -92,6 +114,7 @@ const Marks = () => {
       setShowModal(false);
       setEditingMarks(null);
       fetchMarks();
+      alert('Marks saved successfully!');
     } catch (error) {
       console.error('Error saving marks:', error);
       alert(error.response?.data?.message || 'Error saving marks');
@@ -103,6 +126,7 @@ const Marks = () => {
     setFormData({
       studentId: mark.studentId._id,
       subjectId: mark.subjectId._id,
+      graceMarksApplied: mark.graceMarksApplied || 0,
       marks: mark.marks.map(m => ({
         componentName: m.componentName,
         componentId: m.componentId,
@@ -119,24 +143,89 @@ const Marks = () => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('subjectId', filters.subjectId);
+    if (!filters.subjectId) {
+      alert('Please select a subject first');
+      fileInputRef.current.value = '';
+      return;
+    }
+
+    const formDataUpload = new FormData();
+    formDataUpload.append('file', file);
+    formDataUpload.append('subjectId', filters.subjectId);
 
     try {
-      await marksAPI.bulkUpload(formData);
+      await marksAPI.bulkUpload(formDataUpload);
       setShowCsvModal(false);
+      fileInputRef.current.value = '';
       fetchMarks();
       alert('Marks uploaded successfully!');
     } catch (error) {
       console.error('Error uploading CSV:', error);
+      fileInputRef.current.value = '';
       alert(error.response?.data?.message || 'Error uploading CSV');
+    }
+  };
+
+  const handleSubmitForApproval = async (markId) => {
+    try {
+      await marksAPI.submit(markId);
+      fetchMarks();
+      alert('Marks submitted for approval!');
+    } catch (error) {
+      console.error('Error submitting marks:', error);
+      alert(error.response?.data?.message || 'Error submitting marks');
+    }
+  };
+
+  const handleApprove = async (markId) => {
+    try {
+      await marksAPI.approve(markId);
+      fetchMarks();
+      alert('Marks approved!');
+    } catch (error) {
+      console.error('Error approving marks:', error);
+      alert(error.response?.data?.message || 'Error approving marks');
+    }
+  };
+
+  const downloadTemplate = async () => {
+    try {
+      const response = await marksAPI.getTemplate(filters.subjectId);
+      const blob = new Blob([response.data], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `marks_template_${filters.subjectId}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading template:', error);
+      alert('Error downloading template');
     }
   };
 
   const updateMarkValue = (index, field, value) => {
     const newMarks = [...formData.marks];
-    newMarks[index] = { ...newMarks[index], [field]: value };
+    const mark = newMarks[index];
+
+    if (field === 'marksObtained') {
+      // Cap the value to max marks if not absent
+      const numValue = parseFloat(value) || 0;
+      if (!mark.isAbsent && numValue > mark.maxMarks) {
+        alert(`Marks cannot exceed ${mark.maxMarks} for ${mark.componentName}`);
+        return;
+      }
+      mark.marksObtained = numValue;
+    } else {
+      mark[field] = value;
+      // If marking absent, clear marks obtained
+      if (field === 'isAbsent' && value) {
+        mark.marksObtained = 0;
+      }
+    }
+
     setFormData({ ...formData, marks: newMarks });
   };
 
@@ -226,9 +315,21 @@ const Marks = () => {
                       </span>
                     </td>
                     <td>
-                      <button className="btn btn-sm btn-secondary" onClick={() => handleEdit(mark)}>
-                        <Edit size={16} />
-                      </button>
+                      <div style={{ display: 'flex', gap: '0.25rem' }}>
+                        <button className="btn btn-sm btn-secondary" onClick={() => handleEdit(mark)} title="Edit">
+                          <Edit size={16} />
+                        </button>
+                        {mark.status === 'calculated' && (
+                          <button className="btn btn-sm btn-primary" onClick={() => handleSubmitForApproval(mark._id)} title="Submit for Approval">
+                            <Send size={16} />
+                          </button>
+                        )}
+                        {mark.status === 'submitted' && (user.role === 'admin' || user.role === 'hod') && (
+                          <button className="btn btn-sm btn-success" onClick={() => handleApprove(mark._id)} title="Approve">
+                            <CheckCircle size={16} />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -295,6 +396,23 @@ const Marks = () => {
                 ))}
               </div>
 
+              <div className="form-group" style={{ marginTop: '1rem' }}>
+                <label className="form-label">Grace Marks (0-10)</label>
+                <input
+                  type="number"
+                  className="form-input"
+                  value={formData.graceMarksApplied}
+                  onChange={(e) => setFormData({ ...formData, graceMarksApplied: parseFloat(e.target.value) || 0 })}
+                  min={0}
+                  max={10}
+                  step={0.5}
+                  style={{ maxWidth: '150px' }}
+                />
+                <small style={{ color: 'var(--text-secondary)', display: 'block', marginTop: '0.25rem' }}>
+                  Additional marks to be added to final score
+                </small>
+              </div>
+
               <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                 <button type="submit" className="btn btn-primary">
                   <Save size={20} /> Save
@@ -320,8 +438,13 @@ const Marks = () => {
             </div>
             <div>
               <p style={{ marginBottom: '1rem', color: 'var(--text-secondary)' }}>
-                Upload a CSV file with columns: enrollmentNumber, componentName, marksObtained
+                Upload a CSV file with student enrollment numbers and marks for each component.
               </p>
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                <button className="btn btn-secondary" onClick={downloadTemplate}>
+                  <Download size={20} /> Download Template
+                </button>
+              </div>
               <input
                 type="file"
                 accept=".csv"
@@ -330,7 +453,7 @@ const Marks = () => {
                 style={{ display: 'none' }}
               />
               <button className="btn btn-primary" onClick={() => fileInputRef.current?.click()}>
-                <FileText size={20} /> Choose File
+                <FileText size={20} /> Choose File & Upload
               </button>
             </div>
           </div>

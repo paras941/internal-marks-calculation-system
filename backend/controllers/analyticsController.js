@@ -21,7 +21,14 @@ exports.getClassAverage = async (req, res) => {
     }
 
     if (semester) {
-      matchQuery.semester = parseInt(semester);
+      const semesterNum = parseInt(semester);
+      if (!Number.isInteger(semesterNum) || semesterNum < 1 || semesterNum > 8) {
+        return res.status(400).json({
+          success: false,
+          message: 'Semester must be an integer between 1 and 8'
+        });
+      }
+      matchQuery.semester = semesterNum;
     }
 
     if (section) {
@@ -47,17 +54,17 @@ exports.getClassAverage = async (req, res) => {
           as: 'subject'
         }
       },
-      { $unwind: '$subject' },
+      { $unwind: { path: '$subject', preserveNullAndEmptyArrays: false } },
       {
         $project: {
           _id: 0,
           subjectId: '$_id',
           subjectCode: '$subject.subjectCode',
           subjectName: '$subject.subjectName',
-          averageMarks: { $round: ['$averageMarks', 2] },
-          highestMarks: 1,
-          lowestMarks: 1,
-          totalStudents: 1
+          average: { $round: ['$averageMarks', 2] },
+          highest: '$highestMarks',
+          lowest: '$lowestMarks',
+          studentCount: '$totalStudents'
         }
       }
     ]);
@@ -67,10 +74,15 @@ exports.getClassAverage = async (req, res) => {
       data: stats
     });
   } catch (error) {
-    console.error(error);
+    console.error('[ANALYTICS_CLASS_AVERAGE_ERROR]', {
+      errorName: error.name,
+      errorMessage: error.message,
+      stack: error.stack
+    });
     res.status(500).json({
       success: false,
-      message: 'Error fetching class average'
+      message: 'Error fetching class average',
+      error: error.message
     });
   }
 };
@@ -89,7 +101,14 @@ exports.getSubjectPerformance = async (req, res) => {
     }
 
     if (semester) {
-      matchQuery.semester = parseInt(semester);
+      const semesterNum = parseInt(semester);
+      if (!Number.isInteger(semesterNum) || semesterNum < 1 || semesterNum > 8) {
+        return res.status(400).json({
+          success: false,
+          message: 'Semester must be an integer between 1 and 8'
+        });
+      }
+      matchQuery.semester = semesterNum;
     }
 
     const performance = await StudentMarks.aggregate([
@@ -152,11 +171,25 @@ exports.getAttendanceDistribution = async (req, res) => {
     }
 
     if (month) {
-      matchQuery.month = parseInt(month);
+      const monthNum = parseInt(month);
+      if (!Number.isInteger(monthNum) || monthNum < 1 || monthNum > 12) {
+        return res.status(400).json({
+          success: false,
+          message: 'Month must be an integer between 1 and 12'
+        });
+      }
+      matchQuery.month = monthNum;
     }
 
     if (year) {
-      matchQuery.year = parseInt(year);
+      const yearNum = parseInt(year);
+      if (!Number.isInteger(yearNum) || yearNum < 2000 || yearNum > 2100) {
+        return res.status(400).json({
+          success: false,
+          message: 'Year must be an integer between 2000 and 2100'
+        });
+      }
+      matchQuery.year = yearNum;
     }
 
     const distribution = await Attendance.aggregate([
@@ -207,11 +240,20 @@ exports.getAttendanceDistribution = async (req, res) => {
 // @access  Private
 exports.getStudentProgress = async (req, res) => {
   try {
+    const mongoose = require('mongoose');
     const { studentId } = req.params;
     const { semester } = req.query;
 
+    // If studentId provided, validate it's a valid ObjectId
+    if (studentId && !mongoose.Types.ObjectId.isValid(studentId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid studentId format'
+      });
+    }
+
     // If no studentId provided, use current user (for students)
-    const targetStudentId = studentId || req.user._id;
+    let targetStudentId = studentId ? new mongoose.Types.ObjectId(studentId) : req.user._id;
 
     // Verify access
     if (req.user.role === 'student' && targetStudentId.toString() !== req.user._id.toString()) {
@@ -237,7 +279,7 @@ exports.getStudentProgress = async (req, res) => {
           as: 'subject'
         }
       },
-      { $unwind: '$subject' },
+      { $unwind: { path: '$subject', preserveNullAndEmptyArrays: false } },
       {
         $project: {
           semester: 1,
@@ -286,6 +328,13 @@ exports.getStudentProgress = async (req, res) => {
 // @access  Private
 exports.getDashboardStats = async (req, res) => {
   try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
     const stats = {};
 
     const departmentScope = null;
@@ -361,7 +410,7 @@ exports.getDashboardStats = async (req, res) => {
     }, { draft: 0, calculated: 0, submitted: 0, approved: 0 });
 
     const approved = stats.marksByStatus.approved || 0;
-    stats.approvalRate = marksEntries > 0 ? (approved / marksEntries) * 100 : 0;
+    stats.approvalRate = marksEntries > 0 ? Math.round((approved / marksEntries) * 100) : 0;
     stats.pendingApprovals = Math.max(marksEntries - approved, 0);
 
     // Student-focused summary card.
@@ -371,17 +420,22 @@ exports.getDashboardStats = async (req, res) => {
         { $group: { _id: null, percentage: { $avg: '$percentage' } } }
       ]);
 
+      const attendancePercent = avgAttendance[0]?.percentage || 0;
       stats.studentSummary = {
-        average: stats.classAverage,
-        subjects: distinctMarksSubjects.length,
-        attendance: avgAttendance[0]?.percentage || 0
+        average: Math.round(stats.classAverage * 100) / 100,
+        subjects: distinctMarksSubjects.length || 0,
+        attendance: Math.round(attendancePercent * 100) / 100
       };
     }
 
-    stats.recentActivity = recentMarks.map((entry) => ({
-      description: `${entry.studentId?.firstName || 'Student'} ${entry.studentId?.lastName || ''} • ${entry.subjectId?.subjectCode || 'Subject'} marks ${entry.status}`.trim(),
-      timestamp: entry.updatedAt
-    }));
+    stats.recentActivity = recentMarks.map((entry) => {
+      const studentName = entry.studentId ? `${entry.studentId.firstName || 'Student'} ${entry.studentId.lastName || ''}`.trim() : 'Student';
+      const subjectCode = entry.subjectId ? entry.subjectId.subjectCode || 'Subject' : 'Subject';
+      return {
+        description: `${studentName} • ${subjectCode} marks ${entry.status || 'updated'}`,
+        timestamp: entry.updatedAt
+      };
+    });
 
     res.status(200).json({
       success: true,

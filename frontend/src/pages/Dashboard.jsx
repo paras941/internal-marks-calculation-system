@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { analyticsAPI } from '../services/api';
+import { analyticsAPI, marksAPI, attendanceAPI } from '../services/api';
 import {
   Users,
   BookOpen,
@@ -17,15 +17,26 @@ import {
   Sparkles,
   CheckCircle2
 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [studentMarks, setStudentMarks] = useState([]);
+  const [attendanceData, setAttendanceData] = useState([]);
+  const [marksLoading, setMarksLoading] = useState(false);
 
   useEffect(() => {
     fetchDashboard();
   }, []);
+
+  useEffect(() => {
+    if (user?.role === 'student') {
+      fetchStudentMarks();
+      fetchStudentAttendance();
+    }
+  }, [user]);
 
   const fetchDashboard = async () => {
     try {
@@ -35,6 +46,35 @@ const Dashboard = () => {
       console.error('Error fetching dashboard:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStudentMarks = async () => {
+    try {
+      setMarksLoading(true);
+      const response = await marksAPI.getAll({ studentId: user?._id });
+      setStudentMarks(response.data.data || []);
+    } catch (error) {
+      console.error('Error fetching student marks:', error);
+    } finally {
+      setMarksLoading(false);
+    }
+  };
+
+  const fetchStudentAttendance = async () => {
+    try {
+      const response = await attendanceAPI.getAll({ studentId: user?._id });
+      if (response.data.data && Array.isArray(response.data.data)) {
+        // Format attendance data for chart
+        const formatted = response.data.data.map(record => ({
+          month: new Date(new Date().getFullYear(), record.month - 1).toLocaleString('default', { month: 'short' }),
+          percentage: record.percentage,
+          subject: record.subjectId?.subjectCode || 'Subject'
+        }));
+        setAttendanceData(formatted);
+      }
+    } catch (error) {
+      console.error('Error fetching student attendance:', error);
     }
   };
 
@@ -248,66 +288,157 @@ const Dashboard = () => {
       )}
 
       {user?.role === 'student' && (
-        <div className="card fade-up delay-2">
-          <div className="card-header">
-            <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <BarChart3 size={18} style={{ color: 'var(--primary-color)' }} />
-              Your Performance Summary
-            </h3>
-          </div>
-          <div>
-            {stats?.studentSummary ? (
-              <div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem', marginBottom: '1.5rem' }}>
-                  <div style={{
-                    padding: '1.25rem',
-                    background: '#eef2ff',
-                    borderRadius: 'var(--radius-md)',
-                    textAlign: 'center'
-                  }}>
-                    <div className="stat-label">Overall Average</div>
-                    <div className="stat-value" style={{ color: '#6366f1' }}>
-                      {stats.studentSummary.average?.toFixed(1) || 'N/A'}%
+        <div className="fade-up delay-2">
+          <div className="card" style={{ marginBottom: '1.5rem' }}>
+            <div className="card-header">
+              <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <BarChart3 size={18} style={{ color: 'var(--primary-color)' }} />
+                Your Performance Summary
+              </h3>
+            </div>
+            <div>
+              {stats?.studentSummary ? (
+                <div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <div style={{
+                      padding: '1.25rem',
+                      background: '#eef2ff',
+                      borderRadius: 'var(--radius-md)',
+                      textAlign: 'center'
+                    }}>
+                      <div className="stat-label">Overall Average</div>
+                      <div className="stat-value" style={{ color: '#6366f1' }}>
+                        {stats.studentSummary.average?.toFixed(1) || 'N/A'}%
+                      </div>
+                    </div>
+                    <div style={{
+                      padding: '1.25rem',
+                      background: '#ecfdf5',
+                      borderRadius: 'var(--radius-md)',
+                      textAlign: 'center'
+                    }}>
+                      <div className="stat-label">Subjects Covered</div>
+                      <div className="stat-value" style={{ color: '#10b981' }}>
+                        {stats.studentSummary.subjects || 0}
+                      </div>
+                    </div>
+                    <div style={{
+                      padding: '1.25rem',
+                      background: '#fef3c7',
+                      borderRadius: 'var(--radius-md)',
+                      textAlign: 'center'
+                    }}>
+                      <div className="stat-label">Current Attendance</div>
+                      <div className="stat-value" style={{ color: '#d97706' }}>
+                        {(stats.studentSummary.attendance || 0).toFixed(1)}%
+                      </div>
                     </div>
                   </div>
-                  <div style={{
-                    padding: '1.25rem',
-                    background: '#ecfdf5',
-                    borderRadius: 'var(--radius-md)',
-                    textAlign: 'center'
-                  }}>
-                    <div className="stat-label">Subjects Covered</div>
-                    <div className="stat-value" style={{ color: '#10b981' }}>
-                      {stats.studentSummary.subjects || 0}
-                    </div>
-                  </div>
+                  <Link to="/my-marks" className="btn btn-primary" style={{ width: '100%' }}>
+                    View Detailed Marks
+                    <ArrowRight size={18} />
+                  </Link>
                 </div>
-                <div className="attendance-track">
-                  <div className="attendance-track-head">
-                    <span>Attendance Health</span>
-                    <strong>{(stats.studentSummary.attendance || 0).toFixed(1)}%</strong>
+              ) : (
+                <div className="empty-state">
+                  <div className="empty-state-icon">
+                    <ClipboardList size={28} />
                   </div>
-                  <div className="attendance-track-bar">
-                    <div
-                      className="attendance-track-fill"
-                      style={{ width: `${Math.min(100, stats.studentSummary.attendance || 0)}%` }}
+                  No marks available yet
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Marks by Subject */}
+          {studentMarks.length > 0 && (
+            <div className="card" style={{ marginBottom: '1.5rem' }}>
+              <div className="card-header">
+                <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <ClipboardList size={18} style={{ color: 'var(--primary-color)' }} />
+                  Your Marks by Subject
+                </h3>
+              </div>
+              <div className="table-container">
+                <table className="table">
+                  <thead>
+                    <tr style={{ backgroundColor: '#f3f4f6' }}>
+                      <th>Subject</th>
+                      <th style={{ textAlign: 'center' }}>Total Marks</th>
+                      <th style={{ textAlign: 'center' }}>Final Marks</th>
+                      <th style={{ textAlign: 'center' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {studentMarks.map((mark, index) => (
+                      <tr key={index} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                        <td>
+                          <div>
+                            <div style={{ fontWeight: '600' }}>{mark.subjectId?.subjectCode}</div>
+                            <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>{mark.subjectId?.subjectName}</div>
+                          </div>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <span style={{ backgroundColor: '#e0e7ff', color: '#4f46e5', padding: '0.25rem 0.75rem', borderRadius: '0.375rem', fontWeight: '600' }}>
+                            {mark.totalMarks}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <span style={{ backgroundColor: '#dcfce7', color: '#166534', padding: '0.25rem 0.75rem', borderRadius: '0.375rem', fontWeight: '600' }}>
+                            {mark.finalMarks?.toFixed(2)}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <span style={{
+                            backgroundColor: mark.status === 'approved' ? '#dcfce7' : mark.status === 'submitted' ? '#dbeafe' : '#fee2e2',
+                            color: mark.status === 'approved' ? '#166534' : mark.status === 'submitted' ? '#1e40af' : '#991b1b',
+                            padding: '0.25rem 0.75rem',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.875rem',
+                            fontWeight: '600',
+                            textTransform: 'capitalize'
+                          }}>
+                            {mark.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Attendance Chart */}
+          {attendanceData.length > 0 && (
+            <div className="card">
+              <div className="card-header">
+                <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <BarChart3 size={18} style={{ color: 'var(--primary-color)' }} />
+                  Your Attendance Trend
+                </h3>
+              </div>
+              <div style={{ height: '300px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={attendanceData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis domain={[0, 100]} />
+                    <Tooltip formatter={(value) => `${value}%`} />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="percentage"
+                      stroke="#10b981"
+                      dot={{ fill: '#10b981', r: 5 }}
+                      activeDot={{ r: 7 }}
+                      name="Attendance %"
                     />
-                  </div>
-                </div>
-                <Link to="/my-marks" className="btn btn-primary" style={{ width: '100%' }}>
-                  View Detailed Marks
-                  <ArrowRight size={18} />
-                </Link>
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
-            ) : (
-              <div className="empty-state">
-                <div className="empty-state-icon">
-                  <ClipboardList size={28} />
-                </div>
-                No marks available yet
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
     </div>
