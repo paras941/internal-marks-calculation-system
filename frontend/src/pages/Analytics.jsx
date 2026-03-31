@@ -81,17 +81,17 @@ const Analytics = () => {
       <div className="grid-2" style={{ marginBottom: '1.5rem' }}>
         <div className="card">
           <div className="card-header">
-            <h3 className="card-title">Class Average by Subject</h3>
+            <h3 className="card-title">Class Average by Subject (Bar Chart)</h3>
           </div>
           <div className="chart-container">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={classAverage}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="subjectCode" />
+                <XAxis dataKey="subjectCode" angle={-45} textAnchor="end" height={100} />
                 <YAxis domain={[0, 100]} />
-                <Tooltip />
+                <Tooltip formatter={(value) => value?.toFixed(1)} />
                 <Legend />
-                <Bar dataKey="average" fill="#2563eb" name="Class Average %" />
+                <Bar dataKey="average" fill="#2563eb" name="Class Average" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -126,6 +126,31 @@ const Analytics = () => {
         </div>
       </div>
 
+      <div className="card" style={{ marginBottom: '1.5rem' }}>
+        <div className="card-header">
+          <h3 className="card-title">Class Average Trend by Subject (Line Chart)</h3>
+        </div>
+        <div className="chart-container">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={classAverage}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="subjectCode" angle={-45} textAnchor="end" height={100} />
+              <YAxis domain={[0, 100]} />
+              <Tooltip formatter={(value) => value?.toFixed(1)} />
+              <Legend />
+              <Line
+                type="monotone"
+                dataKey="average"
+                stroke="#2563eb"
+                dot={{ fill: '#2563eb', r: 5 }}
+                activeDot={{ r: 7 }}
+                name="Class Average"
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       <div className="card">
         <div className="card-header">
           <h3 className="card-title">Attendance Distribution</h3>
@@ -147,35 +172,113 @@ const Analytics = () => {
       {/* Statistics Table */}
       <div className="card" style={{ marginTop: '1.5rem' }}>
         <div className="card-header">
-          <h3 className="card-title">Subject Statistics</h3>
+          <h3 className="card-title">Subject Statistics - Performance Overview</h3>
         </div>
         <div className="table-container">
           <table className="table">
             <thead>
-              <tr>
+              <tr style={{ backgroundColor: '#f3f4f6' }}>
                 <th>Subject</th>
-                <th>Code</th>
-                <th>Average</th>
-                <th>Highest</th>
-                <th>Lowest</th>
-                <th>Students</th>
+                <th>Subject Code</th>
+                <th style={{ textAlign: 'center' }}>Total Students</th>
+                <th style={{ textAlign: 'center' }}>Average marks</th>
+                <th style={{ textAlign: 'center' }}>Highest marks</th>
+                <th style={{ textAlign: 'center' }}>Lowest marks</th>
               </tr>
             </thead>
             <tbody>
-              {classAverage.map((subject, index) => (
-                <tr key={index}>
-                  <td>{subject.subjectName}</td>
-                  <td>{subject.subjectCode}</td>
-                  <td>{subject.average?.toFixed(1)}%</td>
-                  <td>{subject.highest?.toFixed(1)}</td>
-                  <td>{subject.lowest?.toFixed(1)}</td>
-                  <td>{subject.studentCount}</td>
+              {classAverage.length > 0 ? (
+                classAverage.map((subject, index) => (
+                  <tr key={index} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                    <td style={{ fontWeight: '500' }}>{subject.subjectName}</td>
+                    <td>
+                      <span style={{ backgroundColor: '#dbeafe', color: '#1e40af', padding: '0.25rem 0.75rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: '500' }}>
+                        {subject.subjectCode}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: 'center', fontWeight: '600', color: '#059669' }}>
+                      {subject.studentCount}
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <div style={{
+                        backgroundColor: '#e0e7ff',
+                        color: '#4f46e5',
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '0.375rem',
+                        fontWeight: '600',
+                        display: 'inline-block'
+                      }}>
+                        {subject.average?.toFixed(1)}
+                      </div>
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <div style={{
+                        backgroundColor: '#dcfce7',
+                        color: '#166534',
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '0.375rem',
+                        fontWeight: '600',
+                        display: 'inline-block'
+                      }}>
+                        {subject.highest?.toFixed(1)}
+                      </div>
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <div style={{
+                        backgroundColor: '#fee2e2',
+                        color: '#991b1b',
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '0.375rem',
+                        fontWeight: '600',
+                        display: 'inline-block'
+                      }}>
+                        {subject.lowest?.toFixed(1)}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
+                    No data available. Select a subject or check if marks have been entered.
+                  </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Summary Statistics Cards */}
+      {classAverage.length > 0 && (
+        <div style={{ marginTop: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+          {classAverage.map((subject, index) => (
+            <div key={index} className="card" style={{ padding: '1.5rem' }}>
+              <h4 style={{ marginBottom: '1rem', color: '#1f2937', fontWeight: '600' }}>
+                {subject.subjectCode} - {subject.subjectName}
+              </h4>
+              <div style={{ display: 'grid', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '0.75rem', borderBottom: '1px solid #e5e7eb' }}>
+                  <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>Total Students:</span>
+                  <span style={{ fontWeight: '600', color: '#059669', fontSize: '1.125rem' }}>{subject.studentCount}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '0.75rem', borderBottom: '1px solid #e5e7eb' }}>
+                  <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>Class Average:</span>
+                  <span style={{ fontWeight: '600', color: '#4f46e5', fontSize: '1.125rem' }}>{subject.average?.toFixed(1)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '0.75rem', borderBottom: '1px solid #e5e7eb' }}>
+                  <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>Highest Score:</span>
+                  <span style={{ fontWeight: '600', color: '#166534', fontSize: '1.125rem' }}>{subject.highest?.toFixed(1)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>Lowest Score:</span>
+                  <span style={{ fontWeight: '600', color: '#991b1b', fontSize: '1.125rem' }}>{subject.lowest?.toFixed(1)}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

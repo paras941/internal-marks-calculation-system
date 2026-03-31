@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const AuditLog = require('../models/AuditLog');
+const mongoose = require('mongoose');
 
 // @desc    Get all users
 // @route   GET /api/users
@@ -157,17 +158,38 @@ exports.updateUser = async (req, res) => {
 // @access  Private (Admin, HOD)
 exports.deleteUser = async (req, res) => {
   try {
-    console.log('Delete user request:', req.params.id, 'by user:', req.user._id);
-    let user = await User.findById(req.params.id);
+    const { id } = req.params;
+    const actorId = req.user?._id;
+
+    console.log('[DELETE_USER] Request received', {
+      userIdToDelete: id,
+      requestedBy: actorId ? actorId.toString() : null,
+      ip: req.ip
+    });
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      console.warn('[DELETE_USER] Invalid MongoDB ObjectId', { userIdToDelete: id });
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user ID'
+      });
+    }
+
+    const user = await User.findById(id);
 
     if (!user) {
+      console.warn('[DELETE_USER] User not found', { userIdToDelete: id });
       return res.status(404).json({
         success: false,
         message: 'User not found'
       });
     }
 
-    if (user._id.toString() === req.user._id.toString()) {
+    if (actorId && user._id.toString() === actorId.toString()) {
+      console.warn('[DELETE_USER] Self-delete blocked', {
+        userIdToDelete: id,
+        requestedBy: actorId.toString()
+      });
       return res.status(400).json({
         success: false,
         message: 'Cannot delete your own account'
@@ -177,33 +199,78 @@ exports.deleteUser = async (req, res) => {
     const userEmail = user.email;
     const oldValue = user.toObject();
 
-    // Soft delete: mark as inactive instead of hard delete
-    user.isActive = false;
-    await user.save();
+    // Soft delete via direct update to avoid unrelated full-document validation failures.
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { $set: { isActive: false } },
+      { new: true, runValidators: false }
+    );
 
-    console.log('User deleted successfully:', userEmail);
+    if (!updatedUser) {
+      console.warn('[DELETE_USER] User disappeared during update', { userIdToDelete: id });
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
 
-    await AuditLog.create({
-      userId: req.user._id,
-      action: 'DELETE',
-      entityType: 'USER',
-      entityId: user._id,
-      oldValue,
-      newValue: user.toObject(),
-      description: `Deleted user: ${userEmail}`,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
+    console.log('[DELETE_USER] User soft-deleted successfully', {
+      userIdToDelete: id,
+      email: userEmail,
+      requestedBy: actorId ? actorId.toString() : null
     });
+
+    try {
+      await AuditLog.create({
+        userId: actorId,
+        action: 'DELETE',
+        entityType: 'USER',
+        entityId: updatedUser._id,
+        oldValue,
+        newValue: updatedUser.toObject(),
+        description: `Deleted user: ${userEmail}`,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+    } catch (auditError) {
+      // Keep main delete API successful even if audit logging fails.
+      console.error('[DELETE_USER] Audit log creation failed', {
+        userIdToDelete: id,
+        requestedBy: actorId ? actorId.toString() : null,
+        error: auditError.message
+      });
+    }
 
     res.status(200).json({
       success: true,
       message: 'User deleted successfully'
     });
   } catch (error) {
-    console.error('Error in deleteUser:', error);
+    console.error('[DELETE_USER] Unexpected error', {
+      userIdToDelete: req.params.id,
+      requestedBy: req.user?._id ? req.user._id.toString() : null,
+      errorName: error.name,
+      errorMessage: error.message,
+      stack: error.stack
+    });
+
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user ID'
+      });
+    }
+
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error while deleting user'
+      });
+    }
+
     res.status(500).json({
       success: false,
-      message: 'Error deleting user'
+      message: 'Internal server error while deleting user'
     });
   }
 };

@@ -33,6 +33,7 @@ const Users = () => {
 
   const fetchUsers = async () => {
     try {
+      setLoading(true);
       const response = await usersAPI.getAll(filters);
       setUsers(response.data.data);
     } catch (error) {
@@ -61,13 +62,15 @@ const Users = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      try {
-        await usersAPI.delete(id);
-        fetchUsers();
-      } catch (error) {
-        console.error('Error deleting user:', error);
-      }
+    try {
+      console.log('Deleting user with ID:', id);
+      await usersAPI.delete(id);
+      console.log('User deleted successfully');
+      alert('User deleted successfully');
+      fetchUsers();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      alert(error.response?.data?.message || 'Error deleting user');
     }
   };
 
