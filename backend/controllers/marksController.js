@@ -5,6 +5,7 @@ const AuditLog = require('../models/AuditLog');
 const { calculateMarks, recalculateAllMarks } = require('../utils/calculationEngine');
 const { processBulkMarksUpload, parseCSV, generateCSVTemplate } = require('../utils/csvParser');
 const fs = require('fs');
+const mongoose = require('mongoose');
 
 // @desc    Get all marks
 // @route   GET /api/marks
@@ -102,11 +103,46 @@ exports.getMark = async (req, res) => {
 // @access  Private (Faculty, Admin)
 exports.createMarks = async (req, res) => {
   try {
+    console.log('[CREATE_MARKS] Request received', {
+      requestedBy: req.user?._id ? req.user._id.toString() : null,
+      bodyKeys: req.body ? Object.keys(req.body) : [],
+      ip: req.ip
+    });
+
+    if (!req.body || typeof req.body !== 'object') {
+      return res.status(400).json({
+        success: false,
+        message: 'Request body is required'
+      });
+    }
+
     const { studentId, subjectId, marks, graceMarksApplied } = req.body;
+
+    if (!studentId || !subjectId || marks === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: studentId, subjectId, marks'
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(studentId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid student ID'
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(subjectId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid subject ID'
+      });
+    }
 
     // Verify subject exists
     const scheme = await EvaluationScheme.findById(subjectId);
     if (!scheme) {
+      console.warn('[CREATE_MARKS] Evaluation scheme not found', { subjectId });
       return res.status(404).json({
         success: false,
         message: 'Evaluation scheme not found'
@@ -116,6 +152,7 @@ exports.createMarks = async (req, res) => {
     // Verify student exists
     const student = await User.findById(studentId);
     if (!student || student.role !== 'student') {
+      console.warn('[CREATE_MARKS] Student not found/invalid role', { studentId });
       return res.status(404).json({
         success: false,
         message: 'Student not found'
@@ -130,8 +167,31 @@ exports.createMarks = async (req, res) => {
       });
     }
 
+    const normalizedMarks = [];
+
     // Validate each mark component
     for (const mark of marks) {
+      if (!mark || typeof mark !== 'object') {
+        return res.status(400).json({
+          success: false,
+          message: 'Each marks entry must be a valid object'
+        });
+      }
+
+      if (!mark.componentId) {
+        return res.status(400).json({
+          success: false,
+          message: 'componentId is required for each marks entry'
+        });
+      }
+
+      if (!mongoose.Types.ObjectId.isValid(mark.componentId)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid component ID: ${mark.componentId}`
+        });
+      }
+
       const component = scheme.components.find(c => c._id.toString() === mark.componentId?.toString());
       if (!component) {
         return res.status(400).json({
@@ -140,16 +200,45 @@ exports.createMarks = async (req, res) => {
         });
       }
 
-      if (!mark.isAbsent && mark.marksObtained > component.maxMarks) {
+      const isAbsent = Boolean(mark.isAbsent);
+      const marksObtainedRaw = isAbsent ? 0 : mark.marksObtained;
+
+      if (!isAbsent && (marksObtainedRaw === undefined || marksObtainedRaw === null || marksObtainedRaw === '')) {
         return res.status(400).json({
           success: false,
-          message: `Marks obtained (${mark.marksObtained}) cannot exceed max marks (${component.maxMarks}) for ${component.name}`
+          message: `marksObtained is required for component ${component.name}`
         });
       }
+
+      const marksObtained = Number(marksObtainedRaw);
+
+      if (!Number.isFinite(marksObtained) || marksObtained < 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid marksObtained for component ${component.name}`
+        });
+      }
+
+      if (!isAbsent && marksObtained > component.maxMarks) {
+        return res.status(400).json({
+          success: false,
+          message: `Marks obtained (${marksObtained}) cannot exceed max marks (${component.maxMarks}) for ${component.name}`
+        });
+      }
+
+      normalizedMarks.push({
+        componentName: mark.componentName || component.name,
+        componentId: component._id,
+        marksObtained,
+        maxMarks: mark.maxMarks ?? component.maxMarks,
+        isAbsent,
+        isGraceApplied: Boolean(mark.isGraceApplied),
+        isBestOfTwo: Boolean(mark.isBestOfTwo)
+      });
     }
 
     // Validate grace marks
-    if (graceMarksApplied && (graceMarksApplied < 0 || graceMarksApplied > 10)) {
+    if (graceMarksApplied !== undefined && (Number(graceMarksApplied) < 0 || Number(graceMarksApplied) > 10)) {
       return res.status(400).json({
         success: false,
         message: 'Grace marks must be between 0 and 10'
@@ -166,9 +255,9 @@ exports.createMarks = async (req, res) => {
 
     if (studentMarks) {
       // Update existing marks
-      studentMarks.marks = marks;
+      studentMarks.marks = normalizedMarks;
       if (graceMarksApplied !== undefined) {
-        studentMarks.graceMarksApplied = graceMarksApplied;
+        studentMarks.graceMarksApplied = Number(graceMarksApplied);
       }
       studentMarks.enteredBy = req.user._id;
     } else {
@@ -179,8 +268,8 @@ exports.createMarks = async (req, res) => {
         department: student.department,
         semester: student.semester,
         section: student.section,
-        marks,
-        graceMarksApplied: graceMarksApplied || 0,
+        marks: normalizedMarks,
+        graceMarksApplied: graceMarksApplied !== undefined ? Number(graceMarksApplied) : 0,
         enteredBy: req.user._id
       });
     }
@@ -188,7 +277,7 @@ exports.createMarks = async (req, res) => {
     // Calculate marks
     const calculated = await calculateMarks(studentMarks, scheme);
 
-    studentMarks.marks = marks;
+    studentMarks.marks = normalizedMarks;
     studentMarks.totalMarks = calculated.totalMarks;
     studentMarks.weightedMarks = calculated.weightedMarks;
     studentMarks.attendanceBonus = calculated.attendanceBonus;
@@ -198,17 +287,32 @@ exports.createMarks = async (req, res) => {
 
     await studentMarks.save();
 
-    // Create audit log
-    await AuditLog.create({
-      userId: req.user._id,
-      action: oldValue ? 'UPDATE' : 'CREATE',
-      entityType: 'STUDENT_MARKS',
-      entityId: studentMarks._id,
-      oldValue,
-      newValue: studentMarks.toObject(),
-      description: `${oldValue ? 'Updated' : 'Created'} marks for student ${student.enrollmentNumber} in ${scheme.subjectCode}`,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
+    // Create audit log (best effort)
+    try {
+      await AuditLog.create({
+        userId: req.user._id,
+        action: oldValue ? 'UPDATE' : 'CREATE',
+        entityType: 'STUDENT_MARKS',
+        entityId: studentMarks._id,
+        oldValue,
+        newValue: studentMarks.toObject(),
+        description: `${oldValue ? 'Updated' : 'Created'} marks for student ${student.enrollmentNumber} in ${scheme.subjectCode}`,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+    } catch (auditError) {
+      console.error('[CREATE_MARKS] Audit log creation failed', {
+        studentId,
+        subjectId,
+        error: auditError.message
+      });
+    }
+
+    console.log('[CREATE_MARKS] Marks saved successfully', {
+      marksId: studentMarks._id.toString(),
+      studentId: studentId.toString(),
+      subjectId: subjectId.toString(),
+      action: oldValue ? 'UPDATE' : 'CREATE'
     });
 
     res.status(201).json({
@@ -216,10 +320,39 @@ exports.createMarks = async (req, res) => {
       data: studentMarks
     });
   } catch (error) {
-    console.error(error);
+    console.error('[CREATE_MARKS] Unexpected error', {
+      studentId: req.body?.studentId,
+      subjectId: req.body?.subjectId,
+      errorName: error.name,
+      errorMessage: error.message,
+      stack: error.stack
+    });
+
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid ObjectId in request'
+      });
+    }
+
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors || {}).map((val) => val.message);
+      return res.status(400).json({
+        success: false,
+        message: messages.length ? messages.join(', ') : 'Schema validation failed while creating marks'
+      });
+    }
+
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Marks already exist for this student and subject'
+      });
+    }
+
     res.status(500).json({
       success: false,
-      message: 'Error creating marks'
+      message: 'Internal server error while creating marks'
     });
   }
 };

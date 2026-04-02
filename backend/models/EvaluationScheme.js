@@ -113,6 +113,9 @@ EvaluationSchemeSchema.index({ department: 1, semester: 1, subjectCode: 1 }, { u
 
 // Calculate total weightage
 EvaluationSchemeSchema.virtual('totalWeightage').get(function() {
+  if (!this.components || !Array.isArray(this.components)) {
+    return 0;
+  }
   return this.components.reduce((sum, comp) => sum + comp.weightage, 0);
 });
 

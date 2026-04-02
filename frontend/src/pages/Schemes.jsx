@@ -31,6 +31,7 @@ const Schemes = () => {
 
   const fetchSchemes = async () => {
     try {
+      setLoading(true);
       const response = await schemesAPI.getAll(filters);
       setSchemes(response.data.data);
     } catch (error) {
@@ -73,13 +74,13 @@ const Schemes = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this scheme?')) {
-      try {
-        await schemesAPI.delete(id);
-        fetchSchemes();
-      } catch (error) {
-        console.error('Error deleting scheme:', error);
-      }
+    try {
+      await schemesAPI.delete(id);
+      alert('Schema deleted successfully');
+      fetchSchemes();
+    } catch (error) {
+      console.error('Error deleting scheme:', error);
+      alert(error.response?.data?.message || 'Error deleting scheme');
     }
   };
 

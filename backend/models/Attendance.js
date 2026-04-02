@@ -51,13 +51,12 @@ const AttendanceSchema = new mongoose.Schema({
 AttendanceSchema.index({ studentId: 1, subjectId: 1, month: 1, year: 1 }, { unique: true });
 
 // Calculate percentage before saving
-AttendanceSchema.pre('save', function(next) {
+AttendanceSchema.pre('save', function() {
   if (this.totalClasses > 0) {
     this.percentage = Math.round((this.attendedClasses / this.totalClasses) * 100);
   } else {
     this.percentage = 0;
   }
-  next();
 });
 
 AttendanceSchema.set('toJSON', { virtuals: true });
