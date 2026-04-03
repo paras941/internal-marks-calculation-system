@@ -100,14 +100,13 @@ const StudentMarksSchema = new mongoose.Schema({
 StudentMarksSchema.index({ studentId: 1, subjectId: 1 }, { unique: true });
 
 // Calculate marks before saving
-StudentMarksSchema.pre('save', async function(next) {
+StudentMarksSchema.pre('save', function() {
   if (this.marks && this.marks.length > 0) {
     // Calculate total marks (sum of all obtained marks)
     this.totalMarks = this.marks.reduce((sum, mark) => {
       return mark.isAbsent ? sum : sum + mark.marksObtained;
     }, 0);
   }
-  next();
 });
 
 StudentMarksSchema.set('toJSON', { virtuals: true });
