@@ -45,6 +45,7 @@ export const authAPI = {
 export const usersAPI = {
   getAll: (params) => api.get('/users', { params }),
   getById: (id) => api.get(`/users/${id}`),
+  register: (data) => api.post('/auth/register', data),
   update: (id, data) => api.put(`/users/${id}`, data),
   delete: (id) => api.delete(`/users/${id}`),
   getStudents: (params) => api.get('/users/students', { params }),
@@ -72,7 +73,9 @@ export const marksAPI = {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
   recalculate: (subjectId) => api.post(`/marks/recalculate/${subjectId}`),
-  approve: (id) => api.put(`/marks/approve/${id}`)
+  submit: (id) => api.put(`/marks/submit/${id}`),
+  approve: (id) => api.put(`/marks/approve/${id}`),
+  getTemplate: (subjectId) => api.get(`/marks/template/${subjectId}`, { responseType: 'blob' })
 };
 
 // Attendance API
