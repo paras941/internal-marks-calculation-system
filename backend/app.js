@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const { mapErrorToHttp } = require('./utils/controllerError');
 
 // Route files
 const authRoutes = require('./routes/authRoutes');
@@ -42,36 +43,31 @@ app.get('/api/health', (req, res) => {
 
 // Error handling middleware
 const errorHandler = (err, req, res, next) => {
-  console.error(err.stack);
-  
-  // Mongoose bad ObjectId
-  if (err.name === 'CastError') {
-    return res.status(400).json({
-      success: false,
-      message: 'Resource not found'
+  // Prevent duplicate responses
+  if (res.headersSent) {
+    console.error('[GLOBAL_ERROR_HANDLER] Response already sent, error suppressed:', {
+      errorMessage: err.message,
+      url: req.originalUrl
     });
+    return;
   }
 
-  // Mongoose duplicate key
-  if (err.code === 11000) {
-    return res.status(400).json({
-      success: false,
-      message: 'Duplicate field value entered'
-    });
-  }
+  console.error('[GLOBAL_ERROR_HANDLER] Caught error', {
+    path: req.originalUrl,
+    method: req.method,
+    errorName: err.name,
+    errorCode: err.code,
+    errorMessage: err.message,
+    stack: err.stack,
+    userId: req.user?._id || 'unknown'
+  });
 
-  // Mongoose validation error
-  if (err.name === 'ValidationError') {
-    const messages = Object.values(err.errors).map(val => val.message);
-    return res.status(400).json({
-      success: false,
-      message: messages.join(', ')
-    });
-  }
+  const mapped = mapErrorToHttp(err);
+  const statusCode = err.statusCode || mapped.statusCode || 500;
 
-  res.status(err.statusCode || 500).json({
+  res.status(statusCode).json({
     success: false,
-    message: err.message || 'Server Error'
+    message: err.message || mapped.message || 'Internal server error'
   });
 };
 
