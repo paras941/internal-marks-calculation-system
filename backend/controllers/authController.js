@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 
 // @desc    Register user
 // @route   POST /api/auth/register
-// @access  Private (Admin only)
+// @access  Public (student self-signup) / Private (Admin, HOD for privileged roles)
 exports.register = async (req, res) => {
   try {
     console.log('[AUTH_REGISTER] Request received', {
@@ -33,6 +33,25 @@ exports.register = async (req, res) => {
       section,
       enrollmentNumber
     } = req.body;
+
+    const normalizedRole = String(role || '').trim().toLowerCase();
+    const requesterRole = req.user?.role;
+
+    // Public self-signup is allowed only for student accounts.
+    // Privileged roles must be created by admin/hod users.
+    if (!requesterRole && normalizedRole !== 'student') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only student self-registration is allowed'
+      });
+    }
+
+    if (requesterRole && !['admin', 'hod'].includes(requesterRole)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to create user accounts'
+      });
+    }
 
     const missingCore = requireFields(req.body, ['email', 'password', 'role']);
     if (missingCore.length > 0) {
@@ -88,7 +107,7 @@ exports.register = async (req, res) => {
       password,
       firstName: String(firstName).trim(),
       lastName: String(lastName).trim(),
-      role: String(role).trim().toLowerCase()
+      role: normalizedRole
     };
     if (department) userData.department = String(department).trim();
     if (semester !== undefined && semester !== '') {
@@ -104,8 +123,9 @@ exports.register = async (req, res) => {
     if (section) userData.section = String(section).trim().toUpperCase();
     if (enrollmentNumber) userData.enrollmentNumber = String(enrollmentNumber).trim();
 
-    // Create user
-    const user = await User.create(userData);
+    // Create user using explicit save so persistence path is unambiguous
+    const user = new User(userData);
+    await user.save();
 
     console.log('[AUTH_REGISTER] User created', {
       createdUserId: user._id.toString(),

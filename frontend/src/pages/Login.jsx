@@ -140,7 +140,7 @@ const Login = () => {
 
       // Network/backend-down case: Axios has no response object.
       if (!err.response) {
-        setError('Cannot connect to server. Please ensure backend is running on port 5000.');
+        setError('Cannot connect to server. Please ensure backend is running and Vite proxy is configured correctly.');
       } else if (data?.errors && data.errors.length > 0) {
         const fieldErrors = {};
         data.errors.forEach((e) => {

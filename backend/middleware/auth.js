@@ -55,3 +55,37 @@ exports.authorize = (...roles) => {
     next();
   };
 };
+
+// Optionally attach authenticated user if a valid Bearer token is provided.
+// Missing token is allowed (for public routes such as student self-signup).
+exports.optionalProtect = async (req, res, next) => {
+  let token;
+
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    token = req.headers.authorization.split(' ')[1];
+  }
+
+  if (!token) {
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id);
+
+    if (!user || !user.isActive) {
+      return res.status(401).json({
+        success: false,
+        message: 'Not authorized to access this route'
+      });
+    }
+
+    req.user = user;
+    next();
+  } catch (err) {
+    return res.status(401).json({
+      success: false,
+      message: 'Not authorized to access this route'
+    });
+  }
+};
