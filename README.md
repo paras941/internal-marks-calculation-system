@@ -206,7 +206,7 @@ Start the backend server:
 npm run dev
 ```
 
-> Backend runs at `http://localhost:5000`
+> Backend runs at `http://localhost:5001`
 
 ### 3. Frontend Setup
 

@@ -10,9 +10,10 @@ const { marksValidators } = require('../validators/validators');
 const { getMarks, getMark, createMarks, updateMarks, deleteMarks, bulkUploadMarks, recalculateMarks, approveMarks, submitMarks, getCSVTemplate } = require('../controllers/marksController');
 
 // Configure multer for CSV upload
+const uploadPath = process.env.UPLOAD_PATH || (process.env.VERCEL ? '/tmp/uploads' : 'uploads/');
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/');
+    cb(null, uploadPath);
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + path.extname(file.originalname));

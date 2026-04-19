@@ -23,8 +23,9 @@ app.use(cors());
 
 // Create uploads directory for file uploads
 const fs = require('fs');
-if (!fs.existsSync('./uploads')) {
-  fs.mkdirSync('./uploads');
+const uploadPath = process.env.UPLOAD_PATH || (process.env.VERCEL ? '/tmp/uploads' : './uploads');
+if (!fs.existsSync(uploadPath)) {
+  fs.mkdirSync(uploadPath, { recursive: true });
 }
 
 // Mount routers

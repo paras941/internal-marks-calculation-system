@@ -6,11 +6,11 @@ const PORT = process.env.PORT || 5000;
 
 // Validate required env vars
 if (!process.env.JWT_SECRET) {
-  console.error('❌ JWT_SECRET is required. Please check backend/.env');
+  console.error(' JWT_SECRET is required. Please check backend/.env');
   process.exit(1);
 }
 if (!process.env.MONGODB_URI) {
-  console.error('❌ MONGODB_URI is required. Please check backend/.env');
+  console.error(' MONGODB_URI is required. Please check backend/.env');
   process.exit(1);
 }
 
