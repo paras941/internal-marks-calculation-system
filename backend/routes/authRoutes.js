@@ -2,11 +2,10 @@ const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
 const { validate, asyncHandler } = require('../middleware/validate');
-const { protect } = require('../middleware/auth');
-const { authorize } = require('../middleware/auth');
+const { protect, optionalProtect } = require('../middleware/auth');
 const { register, login, logout, getMe } = require('../controllers/authController');
 
-router.post('/register', [
+router.post('/register', optionalProtect, [
   body('name')
     .optional()
     .isString().withMessage('name must be a string')
@@ -38,7 +37,7 @@ router.post('/register', [
     return true;
   }),
   body('role').isIn(['admin', 'faculty', 'hod', 'student']).withMessage('Invalid role')
-], validate, protect, authorize('admin', 'hod'), asyncHandler(register));
+], validate, asyncHandler(register));
 
 router.post('/login', [
   body('email').isEmail().withMessage('Please provide a valid email'),
