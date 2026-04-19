@@ -12,8 +12,7 @@ import {
   LogOut,
   Menu,
   X,
-  GraduationCap,
-  ChevronRight
+  GraduationCap
 } from 'lucide-react';
 
 const Layout = () => {
@@ -28,6 +27,12 @@ const Layout = () => {
 
   const getInitials = (firstName, lastName) => {
     return `${(firstName || '')[0] || ''}${(lastName || '')[0] || ''}`.toUpperCase();
+  };
+
+  const handleNavItemClick = () => {
+    if (window.innerWidth <= 768) {
+      setSidebarOpen(false);
+    }
   };
 
   const adminMenu = [
@@ -49,25 +54,17 @@ const Layout = () => {
     <div className="app-container">
       {/* Mobile Toggle */}
       <button
-        className="btn btn-secondary"
-        style={{
-          position: 'fixed',
-          top: '1rem',
-          left: '1rem',
-          zIndex: 200,
-          display: 'none',
-          width: '40px',
-          height: '40px',
-          padding: 0,
-          borderRadius: '0.625rem'
-        }}
+        className="mobile-menu-btn"
+        aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}
         onClick={() => setSidebarOpen(!sidebarOpen)}
       >
         {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
+      {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
+
       {/* Sidebar */}
-      <aside className="sidebar" style={{ display: sidebarOpen ? 'flex' : 'none' }}>
+      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
         {/* Logo */}
         <div className="sidebar-logo">
           <div className="logo-icon-sidebar">
@@ -82,6 +79,7 @@ const Layout = () => {
             <NavLink
               key={item.path}
               to={item.path}
+              onClick={handleNavItemClick}
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
               end={item.path === '/'}
             >
