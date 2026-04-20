@@ -6,7 +6,7 @@ const Attendance = () => {
   const [attendance, setAttendance] = useState([]);
   const [schemes, setSchemes] = useState([]);
   const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [filters, setFilters] = useState({ subjectId: '', month: '', year: '' });
@@ -216,6 +216,8 @@ const Attendance = () => {
     };
   });
 
+  const hasAttendanceData = rowsToDisplay.some(({ record }) => Boolean(record));
+
   return (
     <div>
       <div className="page-header">
@@ -271,53 +273,55 @@ const Attendance = () => {
         {loading ? (
           <div className="loading"><div className="spinner"></div></div>
         ) : filters.subjectId && filters.month && filters.year ? (
-          <>
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-              <span className="badge badge-success">Present (&gt;= 75%)</span>
-              <span className="badge badge-danger">Short (&lt; 75%)</span>
-              <span className="badge badge-warning">Attendance Not Found (Not Submitted)</span>
+          rowsToDisplay.length === 0 ? (
+            <div className="empty-state">No students found for the selected subject.</div>
+          ) : !hasAttendanceData ? (
+            <div className="empty-state">
+              No attendance allotted for the selected subject, month, and year.
             </div>
-            <div className="table-container">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Student</th>
-                  <th>Enrollment No.</th>
-                  <th>Total Classes</th>
-                  <th>Attended</th>
-                  <th>Percentage</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rowsToDisplay.length > 0 ? rowsToDisplay.map(({ student, record }) => (
-                  <tr key={student._id}>
-                    <td>{student.firstName} {student.lastName}</td>
-                    <td>{student.enrollmentNumber || '-'}</td>
-                    <td>{record ? record.totalClasses : '-'}</td>
-                    <td>{record ? record.attendedClasses : '-'}</td>
-                    <td>{record ? `${record.percentage}%` : 'Attendance Not Found'}</td>
-                    <td>
-                      {record ? (
-                        <span className={`badge badge-${record.percentage >= 75 ? 'success' : 'danger'}`}>
-                          {record.percentage >= 75 ? 'Present' : 'Short'}
-                        </span>
-                      ) : (
-                        <span className="badge badge-warning">Attendance Not Found</span>
-                      )}
-                    </td>
-                  </tr>
-                )) : (
+          ) : (
+            <>
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                <span className="badge badge-success">Present (&gt;= 75%)</span>
+                <span className="badge badge-danger">Short (&lt; 75%)</span>
+                <span className="badge badge-warning">Attendance Not Found (Not Submitted)</span>
+              </div>
+              <div className="table-container">
+              <table className="table">
+                <thead>
                   <tr>
-                    <td colSpan="6" style={{ textAlign: 'center' }}>
-                      No students found for selected subject
-                    </td>
+                    <th>Student</th>
+                    <th>Enrollment No.</th>
+                    <th>Total Classes</th>
+                    <th>Attended</th>
+                    <th>Percentage</th>
+                    <th>Status</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
-            </div>
-          </>
+                </thead>
+                <tbody>
+                  {rowsToDisplay.map(({ student, record }) => (
+                    <tr key={student._id}>
+                      <td>{student.firstName} {student.lastName}</td>
+                      <td>{student.enrollmentNumber || '-'}</td>
+                      <td>{record ? record.totalClasses : '-'}</td>
+                      <td>{record ? record.attendedClasses : '-'}</td>
+                      <td>{record ? `${record.percentage}%` : 'Attendance Not Found'}</td>
+                      <td>
+                        {record ? (
+                          <span className={`badge badge-${record.percentage >= 75 ? 'success' : 'danger'}`}>
+                            {record.percentage >= 75 ? 'Present' : 'Short'}
+                          </span>
+                        ) : (
+                          <span className="badge badge-warning">Attendance Not Found</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              </div>
+            </>
+          )
         ) : (
           <div className="empty-state">Please select subject, month, and year to view attendance</div>
         )}

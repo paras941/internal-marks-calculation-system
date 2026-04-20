@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 
 // @desc    Register user
 // @route   POST /api/auth/register
-// @access  Public (student self-signup) / Private (Admin, HOD for privileged roles)
+// @access  Public (student/faculty/admin self-signup) / Private (Admin, HOD for privileged roles)
 exports.register = async (req, res) => {
   try {
     console.log('[AUTH_REGISTER] Request received', {
@@ -37,12 +37,13 @@ exports.register = async (req, res) => {
     const normalizedRole = String(role || '').trim().toLowerCase();
     const requesterRole = req.user?.role;
 
-    // Public self-signup is allowed only for student accounts.
-    // Privileged roles must be created by admin/hod users.
-    if (!requesterRole && normalizedRole !== 'student') {
+    // Public self-signup is allowed for student, faculty, and admin accounts.
+    // HOD accounts must still be created by admin/hod users.
+    const selfSignupRoles = ['student', 'faculty', 'admin'];
+    if (!requesterRole && !selfSignupRoles.includes(normalizedRole)) {
       return res.status(403).json({
         success: false,
-        message: 'Only student self-registration is allowed'
+        message: 'Only student, faculty, and admin self-registration is allowed'
       });
     }
 

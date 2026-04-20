@@ -8,7 +8,7 @@ const Marks = () => {
   const [marks, setMarks] = useState([]);
   const [schemes, setSchemes] = useState([]);
   const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [editingMarks, setEditingMarks] = useState(null);
@@ -277,65 +277,71 @@ const Marks = () => {
         {loading ? (
           <div className="loading"><div className="spinner"></div></div>
         ) : filters.subjectId ? (
-          <div className="table-container">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Student</th>
-                  <th>Enrollment No.</th>
-                  {selectedScheme?.components.map(comp => (
-                    <th key={comp._id}>{comp.name} ({comp.maxMarks})</th>
-                  ))}
-                  <th>Total</th>
-                  <th>Weighted</th>
-                  <th>Final</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {marks.map(mark => (
-                  <tr key={mark._id}>
-                    <td>{mark.studentId?.firstName} {mark.studentId?.lastName}</td>
-                    <td>{mark.studentId?.enrollmentNumber || '-'}</td>
-                    {selectedScheme?.components.map((comp, idx) => {
-                      const markData = mark.marks.find(m => m.componentName === comp.name);
-                      return (
-                        <td key={comp._id}>
-                          {markData?.isAbsent ? 'AB' : markData?.marksObtained || 0}
-                        </td>
-                      );
-                    })}
-                    <td>{mark.totalMarks || 0}</td>
-                    <td>{mark.weightedMarks?.toFixed(1) || 0}</td>
-                    <td style={{ fontWeight: 600 }}>{mark.finalMarks?.toFixed(1) || 0}</td>
-                    <td>
-                      <span className={`badge badge-${mark.status === 'approved' ? 'success' : mark.status === 'submitted' ? 'warning' : 'info'}`}>
-                        {mark.status}
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '0.25rem' }}>
-                        <button className="btn btn-sm btn-secondary" onClick={() => handleEdit(mark)} title="Edit">
-                          <Edit size={16} />
-                        </button>
-                        {mark.status === 'calculated' && (
-                          <button className="btn btn-sm btn-primary" onClick={() => handleSubmitForApproval(mark._id)} title="Submit for Approval">
-                            <Send size={16} />
-                          </button>
-                        )}
-                        {mark.status === 'submitted' && (user.role === 'admin' || user.role === 'hod') && (
-                          <button className="btn btn-sm btn-success" onClick={() => handleApprove(mark._id)} title="Approve">
-                            <CheckCircle size={16} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
+          marks.length > 0 ? (
+            <div className="table-container">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Enrollment No.</th>
+                    {selectedScheme?.components.map(comp => (
+                      <th key={comp._id}>{comp.name} ({comp.maxMarks})</th>
+                    ))}
+                    <th>Total</th>
+                    <th>Weighted</th>
+                    <th>Final</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {marks.map(mark => (
+                    <tr key={mark._id}>
+                      <td>{mark.studentId?.firstName} {mark.studentId?.lastName}</td>
+                      <td>{mark.studentId?.enrollmentNumber || '-'}</td>
+                      {selectedScheme?.components.map((comp) => {
+                        const markData = mark.marks.find(m => m.componentName === comp.name);
+                        return (
+                          <td key={comp._id}>
+                            {markData?.isAbsent ? 'AB' : markData?.marksObtained || 0}
+                          </td>
+                        );
+                      })}
+                      <td>{mark.totalMarks || 0}</td>
+                      <td>{mark.weightedMarks?.toFixed(1) || 0}</td>
+                      <td style={{ fontWeight: 600 }}>{mark.finalMarks?.toFixed(1) || 0}</td>
+                      <td>
+                        <span className={`badge badge-${mark.status === 'approved' ? 'success' : mark.status === 'submitted' ? 'warning' : 'info'}`}>
+                          {mark.status}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '0.25rem' }}>
+                          <button className="btn btn-sm btn-secondary" onClick={() => handleEdit(mark)} title="Edit">
+                            <Edit size={16} />
+                          </button>
+                          {mark.status === 'calculated' && (
+                            <button className="btn btn-sm btn-primary" onClick={() => handleSubmitForApproval(mark._id)} title="Submit for Approval">
+                              <Send size={16} />
+                            </button>
+                          )}
+                          {mark.status === 'submitted' && (user.role === 'admin' || user.role === 'hod') && (
+                            <button className="btn btn-sm btn-success" onClick={() => handleApprove(mark._id)} title="Approve">
+                              <CheckCircle size={16} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="empty-state">
+              No marks allotted for the selected subject{filters.section ? ' and section' : ''}.
+            </div>
+          )
         ) : (
           <div className="empty-state">Please select a subject to view marks</div>
         )}
