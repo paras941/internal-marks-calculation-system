@@ -1,389 +1,260 @@
-<div align="center">
-
 # Internal Marks Calculation System
 
-A comprehensive full-stack academic management system for calculating, managing, and reporting student internal marks with role-based access control, automated calculations, and audit logging.
+A full-stack academic management platform for managing internal assessment workflows, attendance, analytics, and audit-compliant grade operations.
 
-**Built with Node.js, Express, MongoDB, and React**
+## Overview
 
-[![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
-[![Express](https://img.shields.io/badge/Express-4.18-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-9.2-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
-[![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+The Internal Marks Calculation System is designed for institutions that need structured, role-based control over internal evaluation.
 
-</div>
+It supports:
+- User and role management (Admin, HOD, Faculty, Student)
+- Department and semester-based evaluation schemes
+- Component-wise marks entry and weighted calculation
+- Attendance tracking and bonus application
+- Analytics dashboards for performance insights
+- Audit logging for traceability
 
----
+## Core Capabilities
 
-## Table of Contents
+### Role-based access control
+- JWT-protected API with middleware-level authorization
+- Fine-grained route access by role
+- Active/inactive user account enforcement
 
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-- [Environment Variables](#environment-variables)
-- [API Reference](#api-reference)
-- [User Roles & Permissions](#user-roles--permissions)
-- [Calculation Engine](#calculation-engine)
-- [Security](#security)
+### Evaluation and marks lifecycle
+- Configurable schemes with weighted components
+- Marks status workflow (calculate, submit, approve)
+- CSV template download and bulk upload support
+- Recalculation endpoint for subject-level recalculation
 
----
+### Attendance and reporting
+- Attendance record creation and bulk operations
+- Student attendance summary endpoints
+- Dashboard and analytical data endpoints
 
-## Features
-
-### Authentication & Authorization
-- JWT-based authentication with role-based access control
-- Four user roles: **Admin**, **Faculty**, **HOD**, **Student**
-- Password strength validation and secure hashing with bcrypt
-- Session persistence with token auto-refresh
-
-### Evaluation & Marks
-- Dynamic evaluation scheme creation with customizable components (attendance, quiz, midterm, assignment, lab)
-- Automatic weighted marks calculation with support for:
-  - Grace marks
-  - Attendance threshold rules
-  - Best-of-two exam logic
-- CSV bulk upload for marks entry
-- Marks approval workflow (draft &rarr; calculated &rarr; submitted &rarr; approved)
-- Result locking mechanism (Admin/HOD can lock finalized marks)
-- Version history tracking with rollback support
-
-### Dashboards
-| Role | Capabilities |
-|------|-------------|
-| **Admin** | Full system overview, user management, audit logs |
-| **Faculty** | Enter/upload marks, view analytics for assigned subjects |
-| **HOD** | Department-wide analytics, scheme management, marks approval |
-| **Student** | View marks breakdown, download PDF report card |
-
-### Analytics & Reporting
-- Interactive charts powered by Recharts (bar, line, pie)
-- Class average, subject performance, and attendance distribution
-- PDF report card generation with jsPDF
-- Complete audit trail with export capability
-
----
+### Auditability
+- Audit logs for critical actions
+- Export and entity-level audit log retrieval
 
 ## Tech Stack
 
 ### Backend
-
-| Technology | Purpose |
-|-----------|---------|
-| **Node.js** | Runtime environment |
-| **Express.js** | Web framework |
-| **MongoDB + Mongoose** | Database & ODM |
-| **JWT** | Authentication tokens |
-| **bcryptjs** | Password hashing |
-| **express-validator** | Input validation |
-| **multer** | File upload (CSV) |
-| **pdfkit** | Server-side PDF generation |
-| **csv-parser** | CSV file processing |
+- Node.js
+- Express.js
+- MongoDB with Mongoose
+- JWT authentication
+- express-validator
+- multer (CSV upload)
+- pdfkit
 
 ### Frontend
+- React 18
+- Vite
+- React Router v6
+- Axios
+- Recharts
+- jsPDF
 
-| Technology | Purpose |
-|-----------|---------|
-| **React 18** | UI framework |
-| **Vite** | Build tool & dev server |
-| **React Router v6** | Client-side routing |
-| **Axios** | HTTP client |
-| **Recharts** | Data visualization |
-| **jsPDF** | Client-side PDF generation |
-| **Lucide React** | Icon library |
-| **CSS Variables** | Custom design system |
+## Repository Structure
 
----
-
-## Project Structure
-
+```text
+internal-marks-calculation-system-main/
+|-- backend/
+|   |-- api/
+|   |-- config/
+|   |-- controllers/
+|   |-- middleware/
+|   |-- models/
+|   |-- routes/
+|   |-- scripts/
+|   |-- utils/
+|   |-- validators/
+|   |-- app.js
+|   |-- server.js
+|   `-- package.json
+|-- frontend/
+|   |-- src/
+|   |   |-- components/
+|   |   |-- context/
+|   |   |-- pages/
+|   |   `-- services/
+|   |-- index.html
+|   |-- vite.config.js
+|   `-- package.json
+|-- SPEC.md
+`-- README.md
 ```
-internal-marks-calculation-system/
-├── backend/
-│   ├── config/
-│   │   └── db.js                    # MongoDB connection
-│   ├── controllers/
-│   │   ├── authController.js        # Login, register, logout
-│   │   ├── userController.js        # User CRUD operations
-│   │   ├── schemeController.js      # Evaluation scheme management
-│   │   ├── marksController.js       # Marks entry & management
-│   │   ├── attendanceController.js  # Attendance tracking
-│   │   ├── analyticsController.js   # Analytics & reporting
-│   │   └── auditController.js       # Audit log management
-│   ├── middleware/
-│   │   ├── auth.js                  # JWT verification & role check
-│   │   ├── roleCheck.js             # Department-level access control
-│   │   └── validate.js              # Request validation
-│   ├── models/
-│   │   ├── User.js                  # User schema
-│   │   ├── EvaluationScheme.js      # Scheme schema
-│   │   ├── StudentMarks.js          # Student marks schema
-│   │   ├── Attendance.js            # Attendance schema
-│   │   └── AuditLog.js              # Audit log schema
-│   ├── routes/
-│   │   ├── authRoutes.js
-│   │   ├── userRoutes.js
-│   │   ├── schemeRoutes.js
-│   │   ├── marksRoutes.js
-│   │   ├── attendanceRoutes.js
-│   │   ├── analyticsRoutes.js
-│   │   └── auditRoutes.js
-│   ├── utils/
-│   │   ├── calculationEngine.js     # Marks calculation logic
-│   │   ├── csvParser.js             # CSV file processing
-│   │   └── pdfGenerator.js          # PDF report generation
-│   ├── validators/
-│   │   └── validators.js
-│   ├── app.js                       # Express app setup
-│   ├── server.js                    # Server entry point
-│   └── package.json
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   └── Layout.jsx           # Sidebar & header layout
-│   │   ├── context/
-│   │   │   └── AuthContext.jsx       # Auth state management
-│   │   ├── pages/
-│   │   │   ├── Login.jsx            # Authentication page
-│   │   │   ├── Dashboard.jsx        # Home dashboard
-│   │   │   ├── Users.jsx            # User management
-│   │   │   ├── Schemes.jsx          # Evaluation schemes
-│   │   │   ├── Marks.jsx            # Marks entry
-│   │   │   ├── Attendance.jsx       # Attendance tracking
-│   │   │   ├── Analytics.jsx        # Charts & analytics
-│   │   │   ├── AuditLogs.jsx        # Audit log viewer
-│   │   │   └── StudentMarks.jsx     # Student marks view
-│   │   ├── services/
-│   │   │   └── api.js               # Axios API client
-│   │   ├── App.jsx                  # Root component & routing
-│   │   ├── main.jsx                 # React entry point
-│   │   └── index.css                # Global styles & design system
-│   ├── index.html
-│   ├── vite.config.js
-│   └── package.json
-├── SPEC.md
-├── TODO.md
-└── README.md
-```
-
----
 
 ## Getting Started
 
 ### Prerequisites
+- Node.js 18+
+- npm 9+
+- MongoDB (local or Atlas)
 
-- **Node.js** v18 or higher
-- **MongoDB** (local instance or [MongoDB Atlas](https://www.mongodb.com/atlas))
-- **npm** or **yarn**
+### 1) Install dependencies
 
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/your-username/internal-marks-calculation-system.git
-cd internal-marks-calculation-system
-```
-
-### 2. Backend Setup
+Backend:
 
 ```bash
 cd backend
 npm install
 ```
 
-Create a `.env` file in the `backend/` directory (see [Environment Variables](#environment-variables)):
-
-```env
-MONGODB_URI=mongodb+srv://your-connection-string
-JWT_SECRET=your-secret-key
-JWT_EXPIRE=7d
-PORT=5000
-```
-
-Start the backend server:
-
-```bash
-npm run dev
-```
-
-> Backend runs at `http://localhost:5001`
-
-### 3. Frontend Setup
+Frontend:
 
 ```bash
 cd frontend
 npm install
+```
+
+### 2) Configure environment variables
+
+Create `backend/.env`:
+
+```env
+PORT=5000
+MONGODB_URI=<your-mongodb-connection-string>
+JWT_SECRET=<your-jwt-secret>
+JWT_EXPIRE=7d
+```
+
+Create `frontend/.env` (recommended):
+
+```env
+VITE_API_URL=http://localhost:5000/api
+```
+
+Note: If `VITE_API_URL` is not set, the frontend currently defaults to `http://localhost:5001/api`.
+
+### 3) Run the application
+
+Start backend:
+
+```bash
+cd backend
 npm run dev
 ```
 
-> Frontend runs at `http://localhost:3000` with API proxy to the backend
-
-### 4. Create Your First User
-
-Register a user through the registration form on the login page, or create one directly via the API:
+Start frontend:
 
 ```bash
-curl -X POST http://localhost:5000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "firstName": "Admin",
-    "lastName": "User",
-    "email": "admin@example.com",
-    "password": "admin123",
-    "role": "admin",
-    "department": "CS"
-  }'
+cd frontend
+npm run dev
 ```
 
----
+Default local URLs:
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:5000`
+- Health check: `http://localhost:5000/api/health`
 
-## Environment Variables
+## Seed Demo Data
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `MONGODB_URI` | MongoDB connection string | *required* |
-| `JWT_SECRET` | Secret key for JWT signing | *required* |
-| `JWT_EXPIRE` | Token expiration time | `7d` |
-| `PORT` | Backend server port | `5000` |
+The backend includes a script to seed demo users, schemes, marks, and attendance.
 
----
+```bash
+cd backend
+npm run seed:demo
+```
 
-## API Reference
+Default demo password:
+- `Demo@123`
 
-### Authentication
+Sample demo accounts:
+- `demo.admin@imcs.com`
+- `demo.hod@imcs.com`
+- `demo.faculty@imcs.com`
+- `demo.student1@imcs.com`
 
-| Method | Endpoint | Access | Description |
-|--------|----------|--------|-------------|
-| `POST` | `/api/auth/register` | Public | Register new user |
-| `POST` | `/api/auth/login` | Public | User login |
-| `POST` | `/api/auth/logout` | Protected | User logout |
-| `GET` | `/api/auth/me` | Protected | Get current user |
+## Available Scripts
+
+### Backend (`backend/package.json`)
+- `npm run dev` - Run API with nodemon
+- `npm start` - Run API with Node.js
+- `npm run seed:demo` - Seed demo dataset
+- `npm run vercel-start` - Start Vercel API entry
+
+### Frontend (`frontend/package.json`)
+- `npm run dev` - Start Vite dev server
+- `npm run build` - Build production bundle
+- `npm run preview` - Preview production build
+
+## API Overview
+
+Base path: `/api`
+
+### Auth
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/logout`
+- `GET /auth/me`
 
 ### Users
+- `GET /users`
+- `GET /users/students`
+- `GET /users/faculty`
+- `GET /users/:id`
+- `PUT /users/:id`
+- `DELETE /users/:id`
 
-| Method | Endpoint | Access | Description |
-|--------|----------|--------|-------------|
-| `GET` | `/api/users` | Admin, HOD | Get all users |
-| `GET` | `/api/users/students` | Admin, Faculty, HOD | Get all students |
-| `GET` | `/api/users/:id` | Protected | Get user by ID |
-| `PUT` | `/api/users/:id` | Protected | Update user |
-| `DELETE` | `/api/users/:id` | Admin | Delete user |
-
-### Evaluation Schemes
-
-| Method | Endpoint | Access | Description |
-|--------|----------|--------|-------------|
-| `GET` | `/api/schemes` | Protected | Get all schemes |
-| `GET` | `/api/schemes/:id` | Protected | Get scheme by ID |
-| `POST` | `/api/schemes` | Admin, HOD | Create scheme |
-| `PUT` | `/api/schemes/:id` | Admin, HOD | Update scheme |
-| `DELETE` | `/api/schemes/:id` | Admin, HOD | Delete scheme |
+### Evaluation schemes
+- `GET /schemes`
+- `GET /schemes/faculty/my-subjects`
+- `GET /schemes/:id`
+- `POST /schemes`
+- `PUT /schemes/:id`
+- `DELETE /schemes/:id`
 
 ### Marks
-
-| Method | Endpoint | Access | Description |
-|--------|----------|--------|-------------|
-| `GET` | `/api/marks` | Protected | Get marks (with filters) |
-| `GET` | `/api/marks/:id` | Protected | Get marks by ID |
-| `POST` | `/api/marks` | Faculty, HOD | Enter marks |
-| `POST` | `/api/marks/bulk` | Faculty, HOD | Upload marks via CSV |
-| `PUT` | `/api/marks/:id` | Faculty, HOD | Update marks |
-| `DELETE` | `/api/marks/:id` | Admin | Delete marks |
-| `POST` | `/api/marks/recalculate/:id` | Faculty, HOD | Recalculate marks |
-| `PUT` | `/api/marks/approve/:id` | HOD | Approve marks |
+- `GET /marks`
+- `GET /marks/:id`
+- `POST /marks`
+- `PUT /marks/:id`
+- `DELETE /marks/:id`
+- `POST /marks/bulk`
+- `GET /marks/template/:subjectId`
+- `POST /marks/recalculate/:subjectId`
+- `PUT /marks/submit/:id`
+- `PUT /marks/approve/:id`
 
 ### Attendance
-
-| Method | Endpoint | Access | Description |
-|--------|----------|--------|-------------|
-| `GET` | `/api/attendance` | Protected | Get attendance records |
-| `POST` | `/api/attendance` | Faculty, HOD | Mark attendance |
-| `POST` | `/api/attendance/bulk` | Faculty, HOD | Bulk mark attendance |
-| `GET` | `/api/attendance/summary/:id` | Protected | Student attendance summary |
+- `GET /attendance`
+- `POST /attendance`
+- `POST /attendance/bulk`
+- `GET /attendance/summary/:studentId`
 
 ### Analytics
+- `GET /analytics/dashboard`
+- `GET /analytics/class-average`
+- `GET /analytics/subject-performance`
+- `GET /analytics/attendance-distribution`
+- `GET /analytics/student-progress/:studentId?`
 
-| Method | Endpoint | Access | Description |
-|--------|----------|--------|-------------|
-| `GET` | `/api/analytics/dashboard` | Protected | Dashboard statistics |
-| `GET` | `/api/analytics/class-average` | Protected | Class average per subject |
-| `GET` | `/api/analytics/subject-performance` | Protected | Subject performance data |
-| `GET` | `/api/analytics/attendance-distribution` | Protected | Attendance distribution |
-| `GET` | `/api/analytics/student-progress/:id` | Protected | Individual student progress |
+### Audit logs
+- `GET /audit-logs`
+- `GET /audit-logs/export`
+- `GET /audit-logs/entity/:entityType/:entityId`
 
-### Audit Logs
+For full request/response details, refer to `SPEC.md` and route/controller source files.
 
-| Method | Endpoint | Access | Description |
-|--------|----------|--------|-------------|
-| `GET` | `/api/audit-logs` | Admin | Get audit logs |
-| `GET` | `/api/audit-logs/export` | Admin | Export audit logs |
+## Security Notes
 
----
+- JWT-based authentication with protected middleware
+- Role-based authorization checks at route level
+- Validation middleware for request payloads
+- Password hashing using bcryptjs
+- Dedicated global error mapping and centralized error handling
 
-## User Roles & Permissions
+## Deployment Notes
 
-### Admin
-- Full system access
-- Create, edit, and delete users
-- Create and manage evaluation schemes
-- View all marks and analytics across departments
-- Export reports and view audit logs
+Backend includes Vercel configuration under `backend/vercel.json` with API entry at `backend/api/index.js`.
 
-### HOD (Head of Department)
-- View all faculty and students in their department
-- Create and edit evaluation schemes for their department
-- View department-wide analytics
-- Approve submitted marks
+Ensure environment variables are set in your deployment platform:
+- `MONGODB_URI`
+- `JWT_SECRET`
+- `JWT_EXPIRE`
+- `PORT` (if applicable)
 
-### Faculty
-- Enter marks for assigned subjects
-- Upload marks via CSV bulk import
-- View students in assigned subjects
-- View analytics for subjects they teach
+## License
 
-### Student
-- View own marks breakdown by subject and component
-- Download PDF report card
-- View attendance records
-
----
-
-## Calculation Engine
-
-The marks calculation engine applies the following formula:
-
-```
-weightedMarks = SUM(marksObtained / maxMarks * componentWeightage)
-finalMarks    = weightedMarks + graceMarks + attendanceBonus
-```
-
-### Rules
-
-| Rule | Description |
-|------|-------------|
-| **Weighted Marks** | Each component's marks are converted to a percentage and multiplied by its weightage |
-| **Grace Marks** | Configurable per subject (default max: 5), manually applied by faculty |
-| **Attendance Bonus** | Awarded if attendance >= threshold (default: 75%), configurable bonus marks |
-| **Best-of-Two** | When enabled, takes the higher score from two specified exams |
-| **Final Cap** | Final marks are capped at 100 |
-
----
-
-## Security
-
-- **JWT tokens** with configurable expiration
-- **Password hashing** with bcryptjs (10 salt rounds)
-- **Role-based route protection** at middleware level
-- **Input validation** on all endpoints via express-validator
-- **Parameterized queries** preventing NoSQL injection
-- **CORS** configuration
-- **Audit logging** for all data modifications (who, what, when, old value, new value)
-- **Account deactivation** mechanism via `isActive` flag
-
----
-
-<div align="center">
-
-**Internal Marks Calculation System** &mdash; Built for academic excellence
-
-</div>
+This project is licensed under the MIT License. See `LICENSE` for details.
