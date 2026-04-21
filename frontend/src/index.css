@@ -2925,3 +2925,164 @@ body {
     padding-right: 0.95rem;
   }
 }
+
+/* ============================================
+   GLOBAL RESPONSIVE UTILITIES
+   ============================================ */
+.responsive-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.responsive-toolbar-group,
+.responsive-toolbar-actions,
+.responsive-inline-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.responsive-control {
+  min-width: 180px;
+}
+
+.responsive-form-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.responsive-page-header,
+.responsive-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.responsive-summary-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.modal-wide {
+  max-width: min(900px, 96vw) !important;
+}
+
+.modal-medium {
+  max-width: min(560px, 96vw) !important;
+}
+
+.login-two-col-grid,
+.login-three-col-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+@media (max-width: 1024px) {
+  .main-content {
+    padding: 1.25rem;
+  }
+
+  .responsive-control {
+    min-width: 160px;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.75rem 0.85rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .responsive-toolbar,
+  .responsive-toolbar-group,
+  .responsive-toolbar-actions,
+  .responsive-inline-actions,
+  .responsive-card-header,
+  .responsive-page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .responsive-control,
+  .responsive-toolbar .form-input,
+  .responsive-toolbar .form-select,
+  .responsive-toolbar .btn,
+  .responsive-toolbar-actions .btn,
+  .responsive-inline-actions .btn {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .responsive-form-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .responsive-form-row > * {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 1 1 auto !important;
+  }
+
+  .modal {
+    width: min(96vw, 96vw) !important;
+    max-height: 88vh;
+    padding: 1rem !important;
+  }
+
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table {
+    min-width: 640px;
+  }
+
+  .header-welcome {
+    font-size: 0.75rem;
+  }
+
+  .login-two-col-grid,
+  .login-three-col-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .responsive-summary-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content {
+    padding: 0.85rem;
+    padding-top: 4rem;
+  }
+
+  .page-header h1 {
+    font-size: 1.2rem;
+  }
+
+  .card {
+    padding: 0.9rem;
+  }
+
+  .table {
+    min-width: 560px;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.6rem 0.65rem;
+    font-size: 0.8rem;
+  }
+
+  .chart-container {
+    height: 220px;
+  }
+}

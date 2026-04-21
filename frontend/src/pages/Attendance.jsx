@@ -225,13 +225,12 @@ const Attendance = () => {
       </div>
 
       <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <div className="responsive-toolbar" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <div className="responsive-toolbar-group" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <select
-              className="form-select"
+              className="form-select responsive-control"
               value={filters.subjectId}
               onChange={(e) => handleSubjectChange(e.target.value)}
-              style={{ width: 'auto', minWidth: '200px' }}
             >
               <option value="">Select Subject</option>
               {schemes.map(scheme => (
@@ -241,10 +240,9 @@ const Attendance = () => {
               ))}
             </select>
             <select
-              className="form-select"
+              className="form-select responsive-control"
               value={filters.month}
               onChange={(e) => setFilters({ ...filters, month: e.target.value })}
-              style={{ width: 'auto' }}
             >
               <option value="">Select Month</option>
               {months.map((month, index) => (
@@ -252,10 +250,9 @@ const Attendance = () => {
               ))}
             </select>
             <select
-              className="form-select"
+              className="form-select responsive-control"
               value={filters.year}
               onChange={(e) => setFilters({ ...filters, year: e.target.value })}
-              style={{ width: 'auto' }}
             >
               <option value="">Select Year</option>
               {years.map(year => (
@@ -281,7 +278,7 @@ const Attendance = () => {
             </div>
           ) : (
             <>
-              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+              <div className="responsive-inline-actions" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
                 <span className="badge badge-success">Present (&gt;= 75%)</span>
                 <span className="badge badge-danger">Short (&lt; 75%)</span>
                 <span className="badge badge-warning">Attendance Not Found (Not Submitted)</span>
@@ -330,7 +327,7 @@ const Attendance = () => {
       {/* Attendance Entry Modal */}
       {showModal && (
         <div className="modal-overlay" onClick={() => !isSaving && setShowModal(false)}>
-          <div className="modal" style={{ maxWidth: '800px' }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal modal-wide" style={{ maxWidth: '800px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2 className="modal-title">Mark Attendance - {months[formData.month - 1]} {formData.year}</h2>
               <button className="btn btn-secondary btn-sm" onClick={() => setShowModal(false)} disabled={isSaving}>
@@ -386,7 +383,7 @@ const Attendance = () => {
                   </tbody>
                 </table>
               </div>
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+              <div className="responsive-inline-actions" style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                 <button type="submit" className="btn btn-primary" disabled={isSaving}>
                   <Save size={20} /> {isSaving ? 'Saving...' : 'Save Attendance'}
                 </button>

@@ -233,7 +233,7 @@ const Login = () => {
             )}
 
             <form onSubmit={handleRegisterSubmit}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div className="login-two-col-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <div className="form-group">
                   <label className="form-label">First Name</label>
                   <div className="form-input-icon-wrapper">
@@ -373,7 +373,7 @@ const Login = () => {
               </div>
 
               {regData.role === 'student' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                <div className="login-three-col-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
                   <div className="form-group">
                     <label className="form-label">Semester</label>
                     <input

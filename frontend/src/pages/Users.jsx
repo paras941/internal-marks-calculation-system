@@ -117,8 +117,8 @@ const Users = () => {
       </div>
 
       <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <div className="responsive-toolbar" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <div className="responsive-toolbar-group" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <div style={{ position: 'relative' }}>
               <Search size={20} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
               <input
@@ -131,10 +131,9 @@ const Users = () => {
               />
             </div>
             <select
-              className="form-select"
+              className="form-select responsive-control"
               value={filters.role}
               onChange={(e) => setFilters({ ...filters, role: e.target.value })}
-              style={{ width: 'auto' }}
             >
               <option value="">All Roles</option>
               <option value="admin">Admin</option>
@@ -178,7 +177,7 @@ const Users = () => {
                     <td>{user.department || '-'}</td>
                     <td>{user.semester || '-'}</td>
                     <td>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <div className="responsive-inline-actions" style={{ display: 'flex', gap: '0.5rem' }}>
                         <button className="btn btn-sm btn-secondary" onClick={() => handleEdit(user)}>
                           <Edit size={16} />
                         </button>
@@ -308,7 +307,7 @@ const Users = () => {
                   </div>
                 )}
               </div>
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+              <div className="responsive-inline-actions" style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                 <button type="submit" className="btn btn-primary">
                   {editingUser ? 'Update' : 'Create'}
                 </button>

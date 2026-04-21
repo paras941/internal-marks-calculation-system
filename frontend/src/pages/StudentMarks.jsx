@@ -102,7 +102,7 @@ const StudentMarks = () => {
 
   return (
     <div>
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="page-header responsive-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1>My Marks</h1>
           <p style={{ color: 'var(--text-secondary)' }}>
@@ -127,7 +127,7 @@ const StudentMarks = () => {
         <div>
           {marks.map((mark, index) => (
             <div key={index} className="card">
-              <div className="card-header">
+              <div className="card-header responsive-card-header">
                 <div>
                   <h3 className="card-title">
                     {mark.subjectId?.subjectCode} - {mark.subjectId?.subjectName}
@@ -187,7 +187,7 @@ const StudentMarks = () => {
                 </table>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+              <div className="responsive-summary-grid" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
                 <div>
                   <span style={{ color: 'var(--text-secondary)' }}>Total: </span>
                   <strong>{mark.totalMarks}</strong>
@@ -210,7 +210,7 @@ const StudentMarks = () => {
 
           {/* Overall Summary */}
           <div className="card" style={{ background: 'var(--primary-color)', color: 'white' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="responsive-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <h3>Overall Performance</h3>
                 <p style={{ opacity: 0.9 }}>Based on {marks.length} subjects</p>

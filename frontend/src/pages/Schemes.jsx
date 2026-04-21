@@ -111,21 +111,19 @@ const Schemes = () => {
       </div>
 
       <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <div className="responsive-toolbar" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <div className="responsive-toolbar-group" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <input
               type="text"
-              className="form-input"
+              className="form-input responsive-control"
               placeholder="Filter by department..."
               value={filters.department}
               onChange={(e) => setFilters({ ...filters, department: e.target.value })}
-              style={{ width: 'auto' }}
             />
             <select
-              className="form-select"
+              className="form-select responsive-control"
               value={filters.semester}
               onChange={(e) => setFilters({ ...filters, semester: e.target.value })}
-              style={{ width: 'auto' }}
             >
               <option value="">All Semesters</option>
               {[1, 2, 3, 4, 5, 6, 7, 8].map(s => (
@@ -164,7 +162,7 @@ const Schemes = () => {
                     <td>{scheme.components?.length || 0}</td>
                     <td>{scheme.totalWeightage || 0}%</td>
                     <td>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <div className="responsive-inline-actions" style={{ display: 'flex', gap: '0.5rem' }}>
                         <button className="btn btn-sm btn-secondary" onClick={() => handleEdit(scheme)}>
                           <Edit size={16} />
                         </button>
@@ -183,7 +181,7 @@ const Schemes = () => {
 
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" style={{ maxWidth: '700px' }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal modal-wide" style={{ maxWidth: '700px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2 className="modal-title">{editingScheme ? 'Edit Scheme' : 'Create Scheme'}</h2>
               <button className="btn btn-secondary btn-sm" onClick={() => setShowModal(false)}>
@@ -248,7 +246,7 @@ const Schemes = () => {
                   </button>
                 </div>
                 {formData.components.map((component, index) => (
-                  <div key={index} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'flex-end' }}>
+                  <div key={index} className="responsive-form-row" style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'flex-end' }}>
                     <input
                       type="text"
                       className="form-input"
@@ -308,7 +306,7 @@ const Schemes = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+              <div className="responsive-inline-actions" style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                 <button type="submit" className="btn btn-primary">
                   {editingScheme ? 'Update' : 'Create'}
                 </button>

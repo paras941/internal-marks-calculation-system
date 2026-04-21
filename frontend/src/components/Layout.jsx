@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -19,6 +19,17 @@ const Layout = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  useEffect(() => {
+    const syncSidebarWithViewport = () => {
+      setSidebarOpen(window.innerWidth > 768);
+    };
+
+    syncSidebarWithViewport();
+    window.addEventListener('resize', syncSidebarWithViewport);
+
+    return () => window.removeEventListener('resize', syncSidebarWithViewport);
+  }, []);
 
   const handleLogout = async () => {
     await logout();

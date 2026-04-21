@@ -70,13 +70,12 @@ const AuditLogs = () => {
       </div>
 
       <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <div className="responsive-toolbar" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <div className="responsive-toolbar-group" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <select
-              className="form-select"
+              className="form-select responsive-control"
               value={filters.action}
               onChange={(e) => setFilters({ ...filters, action: e.target.value })}
-              style={{ width: 'auto' }}
             >
               <option value="">All Actions</option>
               <option value="CREATE">Create</option>
@@ -86,10 +85,9 @@ const AuditLogs = () => {
               <option value="LOGOUT">Logout</option>
             </select>
             <select
-              className="form-select"
+              className="form-select responsive-control"
               value={filters.entityType}
               onChange={(e) => setFilters({ ...filters, entityType: e.target.value })}
-              style={{ width: 'auto' }}
             >
               <option value="">All Entities</option>
               <option value="USER">User</option>
@@ -100,18 +98,16 @@ const AuditLogs = () => {
             </select>
             <input
               type="date"
-              className="form-input"
+              className="form-input responsive-control"
               value={filters.startDate}
               onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-              style={{ width: 'auto' }}
               placeholder="Start Date"
             />
             <input
               type="date"
-              className="form-input"
+              className="form-input responsive-control"
               value={filters.endDate}
               onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-              style={{ width: 'auto' }}
               placeholder="End Date"
             />
           </div>

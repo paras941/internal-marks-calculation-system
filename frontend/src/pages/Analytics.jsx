@@ -62,12 +62,11 @@ const Analytics = () => {
         <h1>Analytics Dashboard</h1>
       </div>
 
-      <div style={{ marginBottom: '1.5rem' }}>
+      <div className="responsive-toolbar" style={{ marginBottom: '1.5rem' }}>
         <select
-          className="form-select"
+          className="form-select responsive-control"
           value={filters.subjectId}
           onChange={(e) => setFilters({ ...filters, subjectId: e.target.value })}
-          style={{ width: '300px' }}
         >
           <option value="">All Subjects</option>
           {schemes.map(scheme => (
@@ -251,7 +250,7 @@ const Analytics = () => {
 
       {/* Summary Statistics Cards */}
       {classAverage.length > 0 && (
-        <div style={{ marginTop: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+        <div className="responsive-summary-grid" style={{ marginTop: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
           {classAverage.map((subject, index) => (
             <div key={index} className="card" style={{ padding: '1.5rem' }}>
               <h4 style={{ marginBottom: '1rem', color: '#1f2937', fontWeight: '600' }}>

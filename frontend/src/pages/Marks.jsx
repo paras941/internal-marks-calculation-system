@@ -238,13 +238,12 @@ const Marks = () => {
       </div>
 
       <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <div className="responsive-toolbar" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <div className="responsive-toolbar-group" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <select
-              className="form-select"
+              className="form-select responsive-control"
               value={filters.subjectId}
               onChange={(e) => handleSubjectChange(e.target.value)}
-              style={{ width: 'auto', minWidth: '200px' }}
             >
               <option value="">Select Subject</option>
               {schemes.map(scheme => (
@@ -255,15 +254,14 @@ const Marks = () => {
             </select>
             <input
               type="text"
-              className="form-input"
+              className="form-input responsive-control"
               placeholder="Filter by section..."
               value={filters.section}
               onChange={(e) => setFilters({ ...filters, section: e.target.value })}
-              style={{ width: 'auto' }}
             />
           </div>
           {filters.subjectId && (
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div className="responsive-toolbar-actions" style={{ display: 'flex', gap: '0.5rem' }}>
               <button className="btn btn-secondary" onClick={() => setShowCsvModal(true)}>
                 <Upload size={20} /> Upload CSV
               </button>
@@ -316,7 +314,7 @@ const Marks = () => {
                         </span>
                       </td>
                       <td>
-                        <div style={{ display: 'flex', gap: '0.25rem' }}>
+                        <div className="responsive-inline-actions" style={{ display: 'flex', gap: '0.25rem' }}>
                           <button className="btn btn-sm btn-secondary" onClick={() => handleEdit(mark)} title="Edit">
                             <Edit size={16} />
                           </button>
@@ -350,7 +348,7 @@ const Marks = () => {
       {/* Marks Entry Modal */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" style={{ maxWidth: '700px' }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal modal-wide" style={{ maxWidth: '700px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2 className="modal-title">{editingMarks ? 'Edit Marks' : 'Enter Marks'}</h2>
               <button className="btn btn-secondary btn-sm" onClick={() => setShowModal(false)}>
@@ -378,7 +376,7 @@ const Marks = () => {
               <div style={{ marginTop: '1rem' }}>
                 <label className="form-label">Marks</label>
                 {formData.marks.map((mark, index) => (
-                  <div key={index} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center' }}>
+                  <div key={index} className="responsive-form-row" style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center' }}>
                     <span style={{ flex: 2, fontWeight: 500 }}>{mark.componentName}</span>
                     <input
                       type="number"
@@ -419,7 +417,7 @@ const Marks = () => {
                 </small>
               </div>
 
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+              <div className="responsive-inline-actions" style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                 <button type="submit" className="btn btn-primary">
                   <Save size={20} /> Save
                 </button>
@@ -435,7 +433,7 @@ const Marks = () => {
       {/* CSV Upload Modal */}
       {showCsvModal && (
         <div className="modal-overlay" onClick={() => setShowCsvModal(false)}>
-          <div className="modal" style={{ maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal modal-medium" style={{ maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2 className="modal-title">Upload Marks via CSV</h2>
               <button className="btn btn-secondary btn-sm" onClick={() => setShowCsvModal(false)}>
@@ -446,7 +444,7 @@ const Marks = () => {
               <p style={{ marginBottom: '1rem', color: 'var(--text-secondary)' }}>
                 Upload a CSV file with student enrollment numbers and marks for each component.
               </p>
-              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+              <div className="responsive-inline-actions" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
                 <button className="btn btn-secondary" onClick={downloadTemplate}>
                   <Download size={20} /> Download Template
                 </button>
