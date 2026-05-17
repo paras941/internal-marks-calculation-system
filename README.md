@@ -125,7 +125,7 @@ Create `frontend/.env` (recommended):
 VITE_API_URL=http://localhost:5000/api
 ```
 
-Note: If `VITE_API_URL` is not set, the frontend currently defaults to `http://localhost:5001/api`.
+For local development, point the frontend at the backend API running on port 5000.
 
 ### 3) Run the application
 
