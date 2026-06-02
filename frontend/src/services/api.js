@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -51,7 +51,10 @@ export const usersAPI = {
   update: (id, data) => api.put(`/users/${id}`, data),
   delete: (id) => api.delete(`/users/${id}`),
   getStudents: (params) => api.get('/users/students', { params }),
-  getFaculty: () => api.get('/users/faculty')
+  getFaculty: () => api.get('/users/faculty'),
+  bulkUpload: (formData) => api.post('/users/bulk', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
 };
 
 // Schemes API
@@ -61,7 +64,10 @@ export const schemesAPI = {
   create: (data) => api.post('/schemes', data),
   update: (id, data) => api.put(`/schemes/${id}`, data),
   delete: (id) => api.delete(`/schemes/${id}`),
-  getMySubjects: () => api.get('/schemes/faculty/my-subjects')
+  getMySubjects: () => api.get('/schemes/faculty/my-subjects'),
+  bulkUpload: (formData) => api.post('/schemes/bulk', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
 };
 
 // Marks API
@@ -85,6 +91,9 @@ export const attendanceAPI = {
   getAll: (params) => api.get('/attendance', { params }),
   create: (data) => api.post('/attendance', data),
   bulkCreate: (data) => api.post('/attendance/bulk', data),
+  bulkUploadCsv: (formData) => api.post('/attendance/bulk-csv', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
   getSummary: (studentId, params) => api.get(`/attendance/summary/${studentId}`, { params })
 };
 

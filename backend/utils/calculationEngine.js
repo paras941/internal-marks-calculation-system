@@ -7,15 +7,35 @@ const Attendance = require('../models/Attendance');
  */
 const calculateWeightedMarks = (marks, components) => {
   let weightedMarks = 0;
-  let totalWeightage = 0;
+
+  const findComponent = (mark) => {
+    if (mark.componentId) {
+      const byId = components.find(c => c._id.toString() === mark.componentId?.toString());
+      if (byId) {
+        return byId;
+      }
+    }
+
+    if (mark.componentName) {
+      const normalizedName = String(mark.componentName).trim().toLowerCase();
+      return components.find(c => String(c.name).trim().toLowerCase() === normalizedName) || null;
+    }
+
+    return null;
+  };
 
   marks.forEach(mark => {
-    const component = components.find(c => c._id.toString() === mark.componentId?.toString());
+    const component = findComponent(mark);
+    const weightage = Number.isFinite(Number(mark.percentage))
+      ? Number(mark.percentage)
+      : Number.isFinite(Number(mark.weightage))
+        ? Number(mark.weightage)
+        : Number(component?.weightage || 0);
+    const maxMarks = Number.isFinite(Number(mark.maxMarks)) ? Number(mark.maxMarks) : Number(component?.maxMarks || 0);
     
-    if (component && !mark.isAbsent) {
-      const percentage = (mark.marksObtained / mark.maxMarks) * 100;
-      weightedMarks += (percentage * component.weightage) / 100;
-      totalWeightage += component.weightage;
+    if (!mark.isAbsent && maxMarks > 0 && weightage >= 0) {
+      const percentage = (mark.marksObtained / maxMarks) * 100;
+      weightedMarks += (percentage * weightage) / 100;
     }
   });
 
@@ -135,7 +155,18 @@ const calculateMarks = async (studentMarks, scheme) => {
       attendanceBonus,
       graceMarksApplied: finalGrace,
       finalMarks: Math.round(finalMarks * 100) / 100,
-      totalWeightage: scheme.components.reduce((sum, c) => sum + c.weightage, 0)
+      totalWeightage: marks.reduce((sum, mark) => {
+        if (mark.isAbsent) {
+          return sum;
+        }
+
+        const explicitWeightage = Number.isFinite(Number(mark.percentage))
+          ? Number(mark.percentage)
+          : Number.isFinite(Number(mark.weightage))
+            ? Number(mark.weightage)
+            : 0;
+        return sum + explicitWeightage;
+      }, 0)
     };
   } catch (error) {
     console.error('Error calculating marks:', error);

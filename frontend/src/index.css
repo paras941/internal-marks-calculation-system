@@ -781,6 +781,50 @@ h1, h2, h3, h4 {
 }
 
 /* ============================================
+   ANALYTICS PAGE - Charts / Diagrams
+   Ensures Recharts containers have height.
+   ============================================ */
+.analytics-page {
+  padding: 2rem;
+}
+
+.analytics-grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.analytics-grid--charts,
+.analytics-grid--insights,
+.analytics-grid--heatmaps {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 1100px) {
+  .analytics-grid--charts,
+  .analytics-grid--insights,
+  .analytics-grid--heatmaps {
+    grid-template-columns: 1fr;
+  }
+}
+
+.analytics-panel {
+  overflow: hidden;
+}
+
+.analytics-chart {
+  width: 100%;
+  height: 320px;
+}
+
+.analytics-chart--tall {
+  height: 360px;
+}
+
+.analytics-chart--wide {
+  height: 420px;
+}
+
+/* ============================================
    FORMS - Enhanced
    ============================================ */
 .form-group {

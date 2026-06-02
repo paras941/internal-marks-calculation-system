@@ -1,6 +1,7 @@
 const Attendance = require('../models/Attendance');
 const User = require('../models/User');
 const AuditLog = require('../models/AuditLog');
+const { parseCSV, processBulkAttendanceCsv } = require('../utils/csvParser');
 
 // @desc    Get attendance records
 // @route   GET /api/attendance
@@ -243,6 +244,69 @@ exports.bulkCreateAttendance = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error creating bulk attendance'
+    });
+  }
+};
+
+// @desc    Bulk upload attendance via CSV
+// @route   POST /api/attendance/bulk-csv
+// @access  Private (Faculty)
+exports.bulkUploadAttendanceCsv = async (req, res) => {
+  try {
+    const { subjectId, month, year } = req.body;
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please upload a CSV file'
+      });
+    }
+
+    const csvData = await parseCSV(req.file.path);
+    if (csvData.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'CSV file is empty'
+      });
+    }
+
+    const results = await processBulkAttendanceCsv(
+      csvData,
+      subjectId,
+      parseInt(month),
+      parseInt(year),
+      req.user._id
+    );
+
+    try {
+      await AuditLog.create({
+        userId: req.user._id,
+        action: 'CREATE',
+        entityType: 'ATTENDANCE',
+        description: `Bulk uploaded attendance CSV: ${results.success.length} successful, ${results.errors.length} errors`,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+    } catch (auditError) {
+      console.error('[BULK_UPLOAD_ATTENDANCE] Audit log creation failed', {
+        error: auditError.message
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: results
+    });
+  } catch (error) {
+    console.error('[BULK_UPLOAD_ATTENDANCE] Unexpected error', {
+      errorName: error.name,
+      errorMessage: error.message,
+      stack: error.stack
+    });
+
+    res.status(500).json({
+      success: false,
+      message: 'Error uploading attendance CSV'
     });
   }
 };
