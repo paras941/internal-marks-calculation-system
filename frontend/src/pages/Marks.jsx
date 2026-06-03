@@ -1,7 +1,29 @@
 import { useState, useEffect, useRef } from 'react';
 import { marksAPI, schemesAPI, usersAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Edit, Upload, X, Save, FileText, Download, Send, CheckCircle } from 'lucide-react';
+import { Plus, Edit, Upload, X, Save, FileText, Download, Send, CheckCircle, Trash2 } from 'lucide-react';
+
+const createSchemeMarkRow = (component) => ({
+  componentId: component._id,
+  componentName: component.name,
+  maxMarks: component.maxMarks,
+  weightage: component.weightage,
+  marksObtained: 0,
+  isAbsent: false,
+  isGraceApplied: false,
+  isCustom: false
+});
+
+const createCustomMarkRow = () => ({
+  componentId: '',
+  componentName: '',
+  maxMarks: '',
+  weightage: '',
+  marksObtained: '',
+  isAbsent: false,
+  isGraceApplied: false,
+  isCustom: true
+});
 
 const Marks = () => {
   const { user } = useAuth();
@@ -66,21 +88,63 @@ const Marks = () => {
     const scheme = schemes.find(s => s._id === subjectId);
     setFilters({ ...filters, subjectId });
 
-    if (scheme) {
-      setFormData({
-        studentId: '',
-        subjectId,
-        graceMarksApplied: 0,
-        marks: scheme.components.map(comp => ({
-          componentName: comp.name,
-          componentId: comp._id,
-          marksObtained: 0,
-          maxMarks: comp.maxMarks,
-          isAbsent: false,
-          isGraceApplied: false
-        }))
-      });
-    }
+    setFormData({
+      studentId: '',
+      subjectId,
+      graceMarksApplied: 0,
+      marks: scheme ? scheme.components.map(createSchemeMarkRow) : []
+    });
+  };
+
+  const addMarkRow = () => {
+    setFormData((current) => ({
+      ...current,
+      marks: [...current.marks, createCustomMarkRow()]
+    }));
+  };
+
+  const removeMarkRow = (index) => {
+    setFormData((current) => ({
+      ...current,
+      marks: current.marks.filter((_, rowIndex) => rowIndex !== index)
+    }));
+  };
+
+  const handleComponentSelect = (index, value) => {
+    const scheme = schemes.find(s => s._id === formData.subjectId);
+    const selectedComponent = scheme?.components.find(component => component._id === value);
+
+    setFormData((current) => {
+      const nextMarks = [...current.marks];
+      if (!nextMarks[index]) {
+        return current;
+      }
+
+      if (value === 'custom') {
+        nextMarks[index] = {
+          ...nextMarks[index],
+          componentId: '',
+          componentName: '',
+          maxMarks: '',
+          weightage: '',
+          isCustom: true
+        };
+        return { ...current, marks: nextMarks };
+      }
+
+      if (selectedComponent) {
+        nextMarks[index] = {
+          ...nextMarks[index],
+          componentId: selectedComponent._id,
+          componentName: selectedComponent.name,
+          maxMarks: selectedComponent.maxMarks,
+          weightage: selectedComponent.weightage,
+          isCustom: false
+        };
+      }
+
+      return { ...current, marks: nextMarks };
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -92,10 +156,8 @@ const Marks = () => {
       return;
     }
 
-    // Check if at least one mark is entered
-    const hasMarksEntered = formData.marks.some(m => m.marksObtained > 0 || m.isAbsent);
-    if (!hasMarksEntered) {
-      alert('Please enter marks for at least one component or mark as absent');
+    if (!formData.marks.length) {
+      alert('Please add at least one marks parameter');
       return;
     }
 
@@ -105,11 +167,67 @@ const Marks = () => {
       return;
     }
 
+    const payloadMarks = [];
+
+    for (const mark of formData.marks) {
+      const isCustom = mark.isCustom || !mark.componentId;
+      const componentName = String(mark.componentName || '').trim();
+      const maxMarks = Number(mark.maxMarks);
+      const weightage = Number(mark.weightage);
+      const marksObtained = mark.isAbsent ? 0 : Number(mark.marksObtained);
+
+      if (!componentName) {
+        alert('Each parameter needs a component name');
+        return;
+      }
+
+      if (!Number.isFinite(maxMarks) || maxMarks < 0) {
+        alert(`Enter a valid max marks value for ${componentName}`);
+        return;
+      }
+
+      if (!Number.isFinite(weightage) || weightage < 0 || weightage > 100) {
+        alert(`Enter a valid weightage between 0 and 100 for ${componentName}`);
+        return;
+      }
+
+      if (!mark.isAbsent && (mark.marksObtained === '' || mark.marksObtained === null || mark.marksObtained === undefined)) {
+        alert(`Enter marks obtained for ${componentName} or mark it absent`);
+        return;
+      }
+
+      if (!Number.isFinite(marksObtained) || marksObtained < 0) {
+        alert(`Enter valid marks obtained for ${componentName}`);
+        return;
+      }
+
+      if (!mark.isAbsent && marksObtained > maxMarks) {
+        alert(`Marks cannot exceed ${maxMarks} for ${componentName}`);
+        return;
+      }
+
+      payloadMarks.push({
+        componentName,
+        componentId: isCustom ? undefined : mark.componentId,
+        marksObtained,
+        maxMarks,
+        weightage,
+        isAbsent: Boolean(mark.isAbsent),
+        isGraceApplied: Boolean(mark.isGraceApplied)
+      });
+    }
+
     try {
+      const payload = {
+        ...formData,
+        marks: payloadMarks,
+        graceMarksApplied: Number(formData.graceMarksApplied)
+      };
+
       if (editingMarks) {
-        await marksAPI.update(editingMarks._id, formData);
+        await marksAPI.update(editingMarks._id, payload);
       } else {
-        await marksAPI.create(formData);
+        await marksAPI.create(payload);
       }
       setShowModal(false);
       setEditingMarks(null);
@@ -129,11 +247,13 @@ const Marks = () => {
       graceMarksApplied: mark.graceMarksApplied || 0,
       marks: mark.marks.map(m => ({
         componentName: m.componentName,
-        componentId: m.componentId,
+        componentId: m.componentId || '',
         marksObtained: m.marksObtained,
         maxMarks: m.maxMarks,
+        weightage: m.weightage ?? m.percentage ?? '',
         isAbsent: m.isAbsent,
-        isGraceApplied: m.isGraceApplied
+        isGraceApplied: m.isGraceApplied,
+        isCustom: !m.componentId
       }))
     });
     setShowModal(true);
@@ -210,14 +330,27 @@ const Marks = () => {
     const newMarks = [...formData.marks];
     const mark = newMarks[index];
 
+    if (!mark) {
+      return;
+    }
+
+    if (field === 'componentId') {
+      handleComponentSelect(index, value);
+      return;
+    }
+
     if (field === 'marksObtained') {
       // Cap the value to max marks if not absent
-      const numValue = parseFloat(value) || 0;
-      if (!mark.isAbsent && numValue > mark.maxMarks) {
+      const numValue = value === '' ? '' : Number(value);
+      if (numValue !== '' && !mark.isAbsent && Number.isFinite(numValue) && Number.isFinite(Number(mark.maxMarks)) && numValue > Number(mark.maxMarks)) {
         alert(`Marks cannot exceed ${mark.maxMarks} for ${mark.componentName}`);
         return;
       }
       mark.marksObtained = numValue;
+    } else if (field === 'maxMarks' || field === 'weightage') {
+      mark[field] = value === '' ? '' : Number(value);
+    } else if (field === 'componentName') {
+      mark.componentName = value;
     } else {
       mark[field] = value;
       // If marking absent, clear marks obtained
@@ -282,9 +415,7 @@ const Marks = () => {
                   <tr>
                     <th>Student</th>
                     <th>Enrollment No.</th>
-                    {selectedScheme?.components.map(comp => (
-                      <th key={comp._id}>{comp.name} ({comp.maxMarks})</th>
-                    ))}
+                    <th>Components</th>
                     <th>Total</th>
                     <th>Weighted</th>
                     <th>Final</th>
@@ -297,14 +428,17 @@ const Marks = () => {
                     <tr key={mark._id}>
                       <td>{mark.studentId?.firstName} {mark.studentId?.lastName}</td>
                       <td>{mark.studentId?.enrollmentNumber || '-'}</td>
-                      {selectedScheme?.components.map((comp) => {
-                        const markData = mark.marks.find(m => m.componentName === comp.name);
-                        return (
-                          <td key={comp._id}>
-                            {markData?.isAbsent ? 'AB' : markData?.marksObtained || 0}
-                          </td>
-                        );
-                      })}
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                          {mark.marks?.map((component, index) => (
+                            <div key={`${component.componentName}-${index}`} style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                              <strong>{component.componentName}</strong>
+                              <span>{component.isAbsent ? 'AB' : `${component.marksObtained}/${component.maxMarks}`}</span>
+                              <span style={{ color: 'var(--text-secondary)' }}>{component.weightage ?? component.percentage ?? 0}%</span>
+                            </div>
+                          )) || '-'}
+                        </div>
+                      </td>
                       <td>{mark.totalMarks || 0}</td>
                       <td>{mark.weightedMarks?.toFixed(1) || 0}</td>
                       <td style={{ fontWeight: 600 }}>{mark.finalMarks?.toFixed(1) || 0}</td>
@@ -374,28 +508,109 @@ const Marks = () => {
               </div>
 
               <div style={{ marginTop: '1rem' }}>
-                <label className="form-label">Marks</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem' }}>
+                  <label className="form-label" style={{ marginBottom: 0 }}>Marks Parameters</label>
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={addMarkRow}>
+                    <Plus size={16} /> Add Parameter
+                  </button>
+                </div>
+
                 {formData.marks.map((mark, index) => (
-                  <div key={index} className="responsive-form-row" style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center' }}>
-                    <span style={{ flex: 2, fontWeight: 500 }}>{mark.componentName}</span>
-                    <input
-                      type="number"
-                      className="form-input"
-                      value={mark.marksObtained}
-                      onChange={(e) => updateMarkValue(index, 'marksObtained', parseFloat(e.target.value) || 0)}
-                      style={{ flex: 1 }}
-                      min={0}
-                      max={mark.maxMarks}
-                    />
-                    <span style={{ flex: 1, color: 'var(--text-secondary)' }}>/ {mark.maxMarks}</span>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flex: 1 }}>
-                      <input
-                        type="checkbox"
-                        checked={mark.isAbsent}
-                        onChange={(e) => updateMarkValue(index, 'isAbsent', e.target.checked)}
-                      />
-                      Absent
-                    </label>
+                  <div key={`${mark.componentId || 'custom'}-${index}`} style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1rem', marginBottom: '0.75rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                      <strong>Parameter {index + 1}</strong>
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => removeMarkRow(index)}>
+                        <Trash2 size={16} /> Remove
+                      </button>
+                    </div>
+
+                    <div className="responsive-form-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
+                      <div className="form-group">
+                        <label className="form-label">Component</label>
+                        <select
+                          className="form-select"
+                          value={mark.isCustom ? 'custom' : mark.componentId}
+                          onChange={(e) => updateMarkValue(index, 'componentId', e.target.value)}
+                        >
+                          <option value="">Select component</option>
+                          {selectedScheme?.components.map(component => (
+                            <option key={component._id} value={component._id}>
+                              {component.name} ({component.maxMarks})
+                            </option>
+                          ))}
+                          <option value="custom">Custom component</option>
+                        </select>
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">Component Name</label>
+                        {mark.isCustom ? (
+                          <input
+                            type="text"
+                            className="form-input"
+                            value={mark.componentName}
+                            onChange={(e) => updateMarkValue(index, 'componentName', e.target.value)}
+                            placeholder="e.g. Lab Marks"
+                          />
+                        ) : (
+                          <input className="form-input" value={mark.componentName} disabled />
+                        )}
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">Max Marks</label>
+                        {mark.isCustom ? (
+                          <input
+                            type="number"
+                            className="form-input"
+                            value={mark.maxMarks}
+                            onChange={(e) => updateMarkValue(index, 'maxMarks', e.target.value)}
+                            min={0}
+                          />
+                        ) : (
+                          <input className="form-input" value={mark.maxMarks} disabled />
+                        )}
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">Weightage (%)</label>
+                        {mark.isCustom ? (
+                          <input
+                            type="number"
+                            className="form-input"
+                            value={mark.weightage}
+                            onChange={(e) => updateMarkValue(index, 'weightage', e.target.value)}
+                            min={0}
+                            max={100}
+                          />
+                        ) : (
+                          <input className="form-input" value={mark.weightage} disabled />
+                        )}
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">Marks Obtained</label>
+                        <input
+                          type="number"
+                          className="form-input"
+                          value={mark.marksObtained}
+                          onChange={(e) => updateMarkValue(index, 'marksObtained', e.target.value)}
+                          min={0}
+                          max={mark.maxMarks}
+                        />
+                      </div>
+
+                      <div className="form-group" style={{ display: 'flex', alignItems: 'end' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <input
+                            type="checkbox"
+                            checked={mark.isAbsent}
+                            onChange={(e) => updateMarkValue(index, 'isAbsent', e.target.checked)}
+                          />
+                          Absent
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

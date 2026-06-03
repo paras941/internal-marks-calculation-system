@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { attendanceAPI, schemesAPI, usersAPI } from '../services/api';
-import { Plus, Save, X } from 'lucide-react';
+import { Plus, Save, X, Upload } from 'lucide-react';
 
 const Attendance = () => {
   const [attendance, setAttendance] = useState([]);
@@ -9,6 +9,8 @@ const Attendance = () => {
   const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [bulkTotalClasses, setBulkTotalClasses] = useState('');
+  const fileInputRef = useRef(null);
   const [filters, setFilters] = useState({ subjectId: '', month: '', year: '' });
   const [formData, setFormData] = useState({
     subjectId: '',
@@ -115,6 +117,7 @@ const Attendance = () => {
       records
     });
 
+    setBulkTotalClasses('');
     setShowModal(true);
   };
 
@@ -181,6 +184,28 @@ const Attendance = () => {
     setFormData({ ...formData, records: newRecords });
   };
 
+  const applyBulkTotalClasses = (rawValue) => {
+    const parsed = rawValue === '' ? '' : Number(rawValue);
+    if (parsed !== '' && (!Number.isFinite(parsed) || parsed < 0)) {
+      return;
+    }
+
+    setBulkTotalClasses(rawValue);
+
+    if (rawValue === '') {
+      return;
+    }
+
+    const total = Math.floor(parsed);
+    const newRecords = formData.records.map((record) => ({
+      ...record,
+      totalClasses: total,
+      attendedClasses: Math.min(record.attendedClasses, total)
+    }));
+
+    setFormData((current) => ({ ...current, records: newRecords }));
+  };
+
   const updateRecord = (index, field, value) => {
     const newRecords = [...formData.records];
     const updatedRecord = { ...newRecords[index], [field]: value };
@@ -191,6 +216,34 @@ const Attendance = () => {
 
     newRecords[index] = updatedRecord;
     setFormData({ ...formData, records: newRecords });
+  };
+
+  const handleCsvUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!filters.subjectId || !filters.month || !filters.year) {
+      alert('Please select subject, month, and year before uploading CSV');
+      event.target.value = '';
+      return;
+    }
+
+    const payload = new FormData();
+    payload.append('file', file);
+    payload.append('subjectId', filters.subjectId);
+    payload.append('month', filters.month);
+    payload.append('year', filters.year);
+
+    try {
+      await attendanceAPI.bulkUploadCsv(payload);
+      await fetchAttendance(filters);
+      alert('Attendance uploaded successfully');
+    } catch (error) {
+      console.error('Error uploading attendance CSV:', error);
+      alert(error.response?.data?.message || 'Error uploading attendance CSV');
+    } finally {
+      event.target.value = '';
+    }
   };
 
   const currentYear = new Date().getFullYear();
@@ -261,11 +314,17 @@ const Attendance = () => {
             </select>
           </div>
           {filters.subjectId && (
-            <button className="btn btn-primary" onClick={openAttendanceModal}>
-              <Plus size={20} /> Mark Attendance
-            </button>
+            <div className="responsive-inline-actions" style={{ display: 'flex', gap: '0.5rem' }}>
+              <button className="btn btn-secondary" onClick={() => fileInputRef.current?.click()}>
+                <Upload size={20} /> Upload CSV
+              </button>
+              <button className="btn btn-primary" onClick={openAttendanceModal}>
+                <Plus size={20} /> Mark Attendance
+              </button>
+            </div>
           )}
         </div>
+        <input type="file" accept=".csv" ref={fileInputRef} onChange={handleCsvUpload} style={{ display: 'none' }} />
 
         {loading ? (
           <div className="loading"><div className="spinner"></div></div>
@@ -336,9 +395,28 @@ const Attendance = () => {
             </div>
             <form onSubmit={handleSubmit}>
               <div style={{ marginBottom: '0.75rem' }}>
-                <button type="button" className="btn btn-secondary" onClick={markAllPresent} disabled={isSaving}>
-                  Mark All Present
-                </button>
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'end', flexWrap: 'wrap' }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label" htmlFor="bulk-total-classes">
+                      Total Classes (apply to all)
+                    </label>
+                    <input
+                      id="bulk-total-classes"
+                      type="number"
+                      className="form-input"
+                      value={bulkTotalClasses}
+                      onChange={(e) => applyBulkTotalClasses(e.target.value)}
+                      min={0}
+                      placeholder="e.g. 24"
+                      style={{ width: '180px' }}
+                      disabled={isSaving}
+                    />
+                  </div>
+
+                  <button type="button" className="btn btn-secondary" onClick={markAllPresent} disabled={isSaving}>
+                    Mark All Present
+                  </button>
+                </div>
               </div>
               <div className="table-container" style={{ maxHeight: '400px', overflowY: 'auto' }}>
                 <table className="table">

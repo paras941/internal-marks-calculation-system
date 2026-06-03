@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { usersAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Edit, Trash2, Search, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, X, Upload } from 'lucide-react';
 
 const Users = () => {
   const { user: currentUser } = useAuth();
@@ -10,6 +10,7 @@ const Users = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const fileInputRef = useRef(null);
   const [filters, setFilters] = useState({
     role: '',
     department: '',
@@ -71,6 +72,25 @@ const Users = () => {
     } catch (error) {
       console.error('Error deleting user:', error);
       alert(error.response?.data?.message || 'Error deleting user');
+    }
+  };
+
+  const handleCsvUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const payload = new FormData();
+    payload.append('file', file);
+
+    try {
+      await usersAPI.bulkUpload(payload);
+      await fetchUsers();
+      alert('Users uploaded successfully');
+    } catch (error) {
+      console.error('Error uploading users CSV:', error);
+      alert(error.response?.data?.message || 'Error uploading users CSV');
+    } finally {
+      event.target.value = '';
     }
   };
 
@@ -142,9 +162,15 @@ const Users = () => {
               <option value="student">Student</option>
             </select>
           </div>
-          <button className="btn btn-primary" onClick={() => { resetForm(); setEditingUser(null); setShowModal(true); }}>
-            <Plus size={20} /> Add User
-          </button>
+          <div className="responsive-inline-actions" style={{ display: 'flex', gap: '0.5rem' }}>
+            <button className="btn btn-secondary" onClick={() => fileInputRef.current?.click()}>
+              <Upload size={20} /> Upload CSV
+            </button>
+            <button className="btn btn-primary" onClick={() => { resetForm(); setEditingUser(null); setShowModal(true); }}>
+              <Plus size={20} /> Add User
+            </button>
+          </div>
+          <input type="file" accept=".csv" ref={fileInputRef} onChange={handleCsvUpload} style={{ display: 'none' }} />
         </div>
 
         {loading ? (

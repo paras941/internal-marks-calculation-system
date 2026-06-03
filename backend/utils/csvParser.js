@@ -5,6 +5,20 @@ const EvaluationScheme = require('../models/EvaluationScheme');
 const StudentMarks = require('../models/StudentMarks');
 const { calculateMarks } = require('./calculationEngine');
 
+const parseBoolean = (value) => {
+  if (typeof value === 'boolean') return value;
+  return ['true', '1', 'yes', 'y'].includes(String(value || '').trim().toLowerCase());
+};
+
+const parseNumber = (value) => {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
 /**
  * Parse CSV file and validate data
  */
@@ -126,11 +140,14 @@ const processBulkMarksUpload = async (data, subjectId, enteredBy) => {
             continue;
           }
 
+          const percentage = component.weightage;
+
           marks.push({
             componentName: component.name,
             componentId: component._id,
             marksObtained: parsedMarks,
             maxMarks: component.maxMarks,
+            percentage,
             isAbsent: parsedMarks < 0 || row[`${component.name}_absent`]?.toLowerCase() === 'yes'
           });
         }
@@ -204,9 +221,188 @@ const generateCSVTemplate = (scheme) => {
   return headers.join(',') + '\n';
 };
 
+const processBulkUsersUpload = async (data, createdBy) => {
+  const results = {
+    success: [],
+    errors: [],
+    totalProcessed: 0
+  };
+
+  for (const row of data) {
+    results.totalProcessed += 1;
+
+    const email = String(row.email || row.Email || '').trim().toLowerCase();
+    const password = String(row.password || row.Password || '').trim();
+    const firstName = String(row.firstName || row.firstname || row['First Name'] || '').trim();
+    const lastName = String(row.lastName || row.lastname || row['Last Name'] || '').trim();
+    const role = String(row.role || row.Role || 'student').trim().toLowerCase();
+
+    if (!email || !password || !firstName || !lastName || !role) {
+      results.errors.push({ row: results.totalProcessed, error: 'Missing required user columns' });
+      continue;
+    }
+
+    try {
+      const userData = {
+        email,
+        password,
+        firstName,
+        lastName,
+        role,
+        department: String(row.department || row.Department || '').trim() || undefined,
+        semester: parseNumber(row.semester || row.Semester) || undefined,
+        section: String(row.section || row.Section || '').trim() || undefined,
+        enrollmentNumber: String(row.enrollmentNumber || row['Enrollment Number'] || '').trim() || undefined,
+        isActive: row.isActive === undefined ? true : parseBoolean(row.isActive)
+      };
+
+      let user = await User.findOne({ email });
+      if (user) {
+        Object.assign(user, userData);
+        await user.save();
+        results.success.push({ row: results.totalProcessed, email, action: 'updated' });
+      } else {
+        user = await User.create(userData);
+        results.success.push({ row: results.totalProcessed, email, action: 'created', userId: user._id });
+      }
+    } catch (error) {
+      results.errors.push({ row: results.totalProcessed, email, error: error.message });
+    }
+  }
+
+  return results;
+};
+
+const processBulkSchemesUpload = async (data, createdBy) => {
+  const results = {
+    success: [],
+    errors: [],
+    totalProcessed: 0
+  };
+
+  for (const row of data) {
+    results.totalProcessed += 1;
+
+    const department = String(row.department || row.Department || '').trim();
+    const semester = parseNumber(row.semester || row.Semester);
+    const subjectCode = String(row.subjectCode || row['Subject Code'] || '').trim().toUpperCase();
+    const subjectName = String(row.subjectName || row['Subject Name'] || '').trim();
+    const componentsRaw = row.components || row.Components || '';
+
+    if (!department || !semester || !subjectCode || !subjectName || !componentsRaw) {
+      results.errors.push({ row: results.totalProcessed, error: 'Missing required scheme columns' });
+      continue;
+    }
+
+    try {
+      let components = [];
+
+      if (typeof componentsRaw === 'string') {
+        components = JSON.parse(componentsRaw);
+      } else {
+        components = componentsRaw;
+      }
+
+      if (!Array.isArray(components) || components.length === 0) {
+        throw new Error('components must be a JSON array');
+      }
+
+      const normalizedComponents = components.map((component) => ({
+        name: String(component.name || '').trim(),
+        maxMarks: parseNumber(component.maxMarks),
+        weightage: parseNumber(component.percentage ?? component.weightage),
+        isOptional: parseBoolean(component.isOptional)
+      }));
+
+      const scheme = await EvaluationScheme.create({
+        department,
+        semester,
+        subjectCode,
+        subjectName,
+        components: normalizedComponents,
+        createdBy
+      });
+
+      results.success.push({ row: results.totalProcessed, subjectCode, schemeId: scheme._id });
+    } catch (error) {
+      results.errors.push({ row: results.totalProcessed, subjectCode, error: error.message });
+    }
+  }
+
+  return results;
+};
+
+const processBulkAttendanceCsv = async (data, subjectId, month, year, markedBy) => {
+  const results = {
+    success: [],
+    errors: [],
+    totalProcessed: 0
+  };
+
+  const normalizedRecords = data.map((row) => ({
+    studentId: row.studentId || row.StudentId || row.studentID || '',
+    enrollmentNumber: String(row.enrollmentNumber || row['Enrollment Number'] || row.enrollment || '').trim(),
+    totalClasses: row.totalClasses ?? row['Total Classes'] ?? row.total,
+    attendedClasses: row.attendedClasses ?? row['Attended Classes'] ?? row.attended
+  }));
+
+  const Attendance = require('../models/Attendance');
+  const UserModel = require('../models/User');
+
+  const students = await UserModel.find({ role: 'student', isActive: { $ne: false } });
+  const studentMap = new Map(students.map((student) => [student.enrollmentNumber, student]));
+
+  for (const record of normalizedRecords) {
+    results.totalProcessed += 1;
+    const studentId = record.studentId || studentMap.get(record.enrollmentNumber)?._id;
+    const total = parseNumber(record.totalClasses);
+    const attended = parseNumber(record.attendedClasses);
+
+    if (!studentId) {
+      results.errors.push({ row: results.totalProcessed, error: 'Student not found' });
+      continue;
+    }
+
+    if (!Number.isInteger(total) || !Number.isInteger(attended)) {
+      results.errors.push({ row: results.totalProcessed, error: 'totalClasses and attendedClasses must be integers' });
+      continue;
+    }
+
+    try {
+      let attendance = await Attendance.findOne({ studentId, subjectId, month, year });
+
+      if (attendance) {
+        attendance.totalClasses = total;
+        attendance.attendedClasses = attended;
+        attendance.markedBy = markedBy;
+        await attendance.save();
+      } else {
+        attendance = await Attendance.create({
+          studentId,
+          subjectId,
+          totalClasses: total,
+          attendedClasses: attended,
+          month,
+          year,
+          markedBy
+        });
+      }
+
+      results.success.push({ row: results.totalProcessed, studentId: String(studentId), attendanceId: attendance._id });
+    } catch (error) {
+      results.errors.push({ row: results.totalProcessed, error: error.message });
+    }
+  }
+
+  return results;
+};
+
 module.exports = {
   parseCSV,
   validateCSVData,
   processBulkMarksUpload,
-  generateCSVTemplate
+  generateCSVTemplate,
+  processBulkUsersUpload,
+  processBulkSchemesUpload,
+  processBulkAttendanceCsv
 };
