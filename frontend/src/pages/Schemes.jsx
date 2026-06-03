@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { schemesAPI } from '../services/api';
-import { Plus, Edit, Trash2, X } from 'lucide-react';
+import { Plus, Edit, Trash2, X, Upload } from 'lucide-react';
 
 const Schemes = () => {
   const [schemes, setSchemes] = useState([]);
@@ -8,17 +8,18 @@ const Schemes = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingScheme, setEditingScheme] = useState(null);
   const [filters, setFilters] = useState({ department: '', semester: '' });
+  const fileInputRef = useRef(null);
   const [formData, setFormData] = useState({
     department: '',
     semester: '',
     subjectCode: '',
     subjectName: '',
     components: [
-      { name: 'Attendance', maxMarks: 5, weightage: 5, isOptional: false },
-      { name: 'Quiz', maxMarks: 10, weightage: 10, isOptional: false },
-      { name: 'Midterm', maxMarks: 30, weightage: 30, isOptional: false },
-      { name: 'Assignment', maxMarks: 10, weightage: 10, isOptional: false },
-      { name: 'Lab', maxMarks: 45, weightage: 45, isOptional: false }
+      { name: 'Attendance', maxMarks: 5, percentage: 5, isOptional: false },
+      { name: 'Quiz', maxMarks: 10, percentage: 10, isOptional: false },
+      { name: 'Midterm', maxMarks: 30, percentage: 30, isOptional: false },
+      { name: 'Assignment', maxMarks: 10, percentage: 10, isOptional: false },
+      { name: 'Lab', maxMarks: 45, percentage: 45, isOptional: false }
     ],
     graceMarks: { maxGraceMarks: 5, allowCarryOver: false },
     attendanceThreshold: { minAttendancePercentage: 75, marksApplicable: 5 },
@@ -65,7 +66,10 @@ const Schemes = () => {
       semester: scheme.semester,
       subjectCode: scheme.subjectCode,
       subjectName: scheme.subjectName,
-      components: scheme.components || [],
+      components: (scheme.components || []).map((component) => ({
+        ...component,
+        percentage: component.percentage ?? component.weightage ?? 0
+      })),
       graceMarks: scheme.graceMarks || { maxGraceMarks: 5, allowCarryOver: false },
       attendanceThreshold: scheme.attendanceThreshold || { minAttendancePercentage: 75, marksApplicable: 5 },
       bestOfTwoLogic: scheme.bestOfTwoLogic || { enabled: false, exams: [] }
@@ -87,7 +91,7 @@ const Schemes = () => {
   const addComponent = () => {
     setFormData({
       ...formData,
-      components: [...formData.components, { name: '', maxMarks: 10, weightage: 10, isOptional: false }]
+      components: [...formData.components, { name: '', maxMarks: 10, percentage: 10, isOptional: false }]
     });
   };
 
@@ -102,7 +106,26 @@ const Schemes = () => {
     setFormData({ ...formData, components: newComponents });
   };
 
-  const totalWeightage = formData.components.reduce((sum, c) => sum + (parseFloat(c.weightage) || 0), 0);
+  const totalPercentage = formData.components.reduce((sum, c) => sum + (parseFloat(c.percentage) || 0), 0);
+
+  const handleCsvUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const payload = new FormData();
+    payload.append('file', file);
+
+    try {
+      await schemesAPI.bulkUpload(payload);
+      await fetchSchemes();
+      alert('Schemes uploaded successfully');
+    } catch (error) {
+      console.error('Error uploading schemes CSV:', error);
+      alert(error.response?.data?.message || 'Error uploading schemes CSV');
+    } finally {
+      event.target.value = '';
+    }
+  };
 
   return (
     <div>
@@ -131,9 +154,15 @@ const Schemes = () => {
               ))}
             </select>
           </div>
-          <button className="btn btn-primary" onClick={() => { setEditingScheme(null); setShowModal(true); }}>
-            <Plus size={20} /> Add Scheme
-          </button>
+          <div className="responsive-inline-actions" style={{ display: 'flex', gap: '0.5rem' }}>
+            <button className="btn btn-secondary" onClick={() => fileInputRef.current?.click()}>
+              <Upload size={20} /> Upload CSV
+            </button>
+            <button className="btn btn-primary" onClick={() => { setEditingScheme(null); setShowModal(true); }}>
+              <Plus size={20} /> Add Scheme
+            </button>
+          </div>
+          <input type="file" accept=".csv" ref={fileInputRef} onChange={handleCsvUpload} style={{ display: 'none' }} />
         </div>
 
         {loading ? (
@@ -148,7 +177,7 @@ const Schemes = () => {
                   <th>Department</th>
                   <th>Semester</th>
                   <th>Components</th>
-                  <th>Total Weightage</th>
+                  <th>Total Percentage</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -269,8 +298,8 @@ const Schemes = () => {
                       type="number"
                       className="form-input"
                       placeholder="Weight%"
-                      value={component.weightage}
-                      onChange={(e) => updateComponent(index, 'weightage', parseFloat(e.target.value))}
+                      value={component.percentage}
+                      onChange={(e) => updateComponent(index, 'percentage', parseFloat(e.target.value))}
                       style={{ flex: 1 }}
                       required
                     />
@@ -280,8 +309,8 @@ const Schemes = () => {
                   </div>
                 ))}
                 <div style={{ textAlign: 'right', marginTop: '0.5rem', fontWeight: 500 }}>
-                  Total Weightage: {totalWeightage}%
-                  {totalWeightage !== 100 && <span style={{ color: 'var(--danger-color)', marginLeft: '0.5rem' }}>(Should be 100%)</span>}
+                  Total Percentage: {totalPercentage}%
+                  {totalPercentage !== 100 && <span style={{ color: 'var(--danger-color)', marginLeft: '0.5rem' }}>(Should be 100%)</span>}
                 </div>
               </div>
 

@@ -1,0 +1,11 @@
+First Name,Last Name,Email,Password,Role,Department,Semester,Section,Enrollment Number
+Diya,Patel,diya.patel@imcs.com,Demo@123,Student,CSE,3,A,DEMO23CSE002
+Arjun,Sharma,arjun.sharma@imcs.com,Demo@123,Student,CSE,3,A,DEMO23CSE003
+Priya,Singh,priya.singh@imcs.com,Demo@123,Student,CSE,3,A,DEMO23CSE004
+Rahul,Verma,rahul.verma@imcs.com,Demo@123,Student,CSE,3,A,DEMO23CSE005
+Sneha,Gupta,sneha.gupta@imcs.com,Demo@123,Student,CSE,3,B,DEMO23CSE006
+Karan,Mehta,karan.mehta@imcs.com,Demo@123,Student,CSE,3,B,DEMO23CSE007
+Ananya,Roy,ananya.roy@imcs.com,Demo@123,Student,CSE,3,B,DEMO23CSE008
+Vikram,Joshi,vikram.joshi@imcs.com,Demo@123,Student,CSE,3,B,DEMO23CSE009
+Riya,Kapoor,riya.kapoor@imcs.com,Demo@123,Student,CSE,3,C,DEMO23CSE010
+Aman,Yadav,aman.yadav@imcs.com,Demo@123,Student,CSE,3,C,DEMO23CSE011

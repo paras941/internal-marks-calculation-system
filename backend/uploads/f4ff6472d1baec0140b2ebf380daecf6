@@ -1,0 +1,71 @@
+Student Name,Enrollment Number,Subject,Month,Year,Total Classes,Attended,Attendance Percentage
+Diya Patel,DEMO23CSE002,DAA,May,2026,24,24,100.0
+Arjun Sharma,DEMO23CSE003,DAA,May,2026,24,23,95.83
+Priya Singh,DEMO23CSE004,DAA,May,2026,24,22,91.67
+Rahul Verma,DEMO23CSE005,DAA,May,2026,24,21,87.5
+Sneha Gupta,DEMO23CSE006,DAA,May,2026,24,20,83.33
+Karan Mehta,DEMO23CSE007,DAA,May,2026,24,19,79.17
+Ananya Roy,DEMO23CSE008,DAA,May,2026,24,18,75.0
+Vikram Joshi,DEMO23CSE009,DAA,May,2026,24,17,70.83
+Riya Kapoor,DEMO23CSE010,DAA,May,2026,24,24,100.0
+Aman Yadav,DEMO23CSE011,DAA,May,2026,24,23,95.83
+Diya Patel,DEMO23CSE002,Mathematics 1,May,2026,24,24,100.0
+Arjun Sharma,DEMO23CSE003,Mathematics 1,May,2026,24,23,95.83
+Priya Singh,DEMO23CSE004,Mathematics 1,May,2026,24,22,91.67
+Rahul Verma,DEMO23CSE005,Mathematics 1,May,2026,24,21,87.5
+Sneha Gupta,DEMO23CSE006,Mathematics 1,May,2026,24,20,83.33
+Karan Mehta,DEMO23CSE007,Mathematics 1,May,2026,24,19,79.17
+Ananya Roy,DEMO23CSE008,Mathematics 1,May,2026,24,18,75.0
+Vikram Joshi,DEMO23CSE009,Mathematics 1,May,2026,24,17,70.83
+Riya Kapoor,DEMO23CSE010,Mathematics 1,May,2026,24,24,100.0
+Aman Yadav,DEMO23CSE011,Mathematics 1,May,2026,24,23,95.83
+Diya Patel,DEMO23CSE002,Big Data,May,2026,24,24,100.0
+Arjun Sharma,DEMO23CSE003,Big Data,May,2026,24,23,95.83
+Priya Singh,DEMO23CSE004,Big Data,May,2026,24,22,91.67
+Rahul Verma,DEMO23CSE005,Big Data,May,2026,24,21,87.5
+Sneha Gupta,DEMO23CSE006,Big Data,May,2026,24,20,83.33
+Karan Mehta,DEMO23CSE007,Big Data,May,2026,24,19,79.17
+Ananya Roy,DEMO23CSE008,Big Data,May,2026,24,18,75.0
+Vikram Joshi,DEMO23CSE009,Big Data,May,2026,24,17,70.83
+Riya Kapoor,DEMO23CSE010,Big Data,May,2026,24,24,100.0
+Aman Yadav,DEMO23CSE011,Big Data,May,2026,24,23,95.83
+Diya Patel,DEMO23CSE002,Operating System,May,2026,24,24,100.0
+Arjun Sharma,DEMO23CSE003,Operating System,May,2026,24,23,95.83
+Priya Singh,DEMO23CSE004,Operating System,May,2026,24,22,91.67
+Rahul Verma,DEMO23CSE005,Operating System,May,2026,24,21,87.5
+Sneha Gupta,DEMO23CSE006,Operating System,May,2026,24,20,83.33
+Karan Mehta,DEMO23CSE007,Operating System,May,2026,24,19,79.17
+Ananya Roy,DEMO23CSE008,Operating System,May,2026,24,18,75.0
+Vikram Joshi,DEMO23CSE009,Operating System,May,2026,24,17,70.83
+Riya Kapoor,DEMO23CSE010,Operating System,May,2026,24,24,100.0
+Aman Yadav,DEMO23CSE011,Operating System,May,2026,24,23,95.83
+Diya Patel,DEMO23CSE002,Computer Network,May,2026,24,24,100.0
+Arjun Sharma,DEMO23CSE003,Computer Network,May,2026,24,23,95.83
+Priya Singh,DEMO23CSE004,Computer Network,May,2026,24,22,91.67
+Rahul Verma,DEMO23CSE005,Computer Network,May,2026,24,21,87.5
+Sneha Gupta,DEMO23CSE006,Computer Network,May,2026,24,20,83.33
+Karan Mehta,DEMO23CSE007,Computer Network,May,2026,24,19,79.17
+Ananya Roy,DEMO23CSE008,Computer Network,May,2026,24,18,75.0
+Vikram Joshi,DEMO23CSE009,Computer Network,May,2026,24,17,70.83
+Riya Kapoor,DEMO23CSE010,Computer Network,May,2026,24,24,100.0
+Aman Yadav,DEMO23CSE011,Computer Network,May,2026,24,23,95.83
+Diya Patel,DEMO23CSE002,Demo Software Engineering,May,2026,24,24,100.0
+Arjun Sharma,DEMO23CSE003,Demo Software Engineering,May,2026,24,23,95.83
+Priya Singh,DEMO23CSE004,Demo Software Engineering,May,2026,24,22,91.67
+Rahul Verma,DEMO23CSE005,Demo Software Engineering,May,2026,24,21,87.5
+Sneha Gupta,DEMO23CSE006,Demo Software Engineering,May,2026,24,20,83.33
+Karan Mehta,DEMO23CSE007,Demo Software Engineering,May,2026,24,19,79.17
+Ananya Roy,DEMO23CSE008,Demo Software Engineering,May,2026,24,18,75.0
+Vikram Joshi,DEMO23CSE009,Demo Software Engineering,May,2026,24,17,70.83
+Riya Kapoor,DEMO23CSE010,Demo Software Engineering,May,2026,24,24,100.0
+Aman Yadav,DEMO23CSE011,Demo Software Engineering,May,2026,24,23,95.83
+Diya Patel,DEMO23CSE002,Demo Database Systems,May,2026,24,24,100.0
+Arjun Sharma,DEMO23CSE003,Demo Database Systems,May,2026,24,23,95.83
+Priya Singh,DEMO23CSE004,Demo Database Systems,May,2026,24,22,91.67
+Rahul Verma,DEMO23CSE005,Demo Database Systems,May,2026,24,21,87.5
+Sneha Gupta,DEMO23CSE006,Demo Database Systems,May,2026,24,20,83.33
+Karan Mehta,DEMO23CSE007,Demo Database Systems,May,2026,24,19,79.17
+Ananya Roy,DEMO23CSE008,Demo Database Systems,May,2026,24,18,75.0
+Vikram Joshi,DEMO23CSE009,Demo Database Systems,May,2026,24,17,70.83
+Riya Kapoor,DEMO23CSE010,Demo Database Systems,May,2026,24,24,100.0
+Aman Yadav,DEMO23CSE011,Demo Database Systems,May,2026,24,23,95.83

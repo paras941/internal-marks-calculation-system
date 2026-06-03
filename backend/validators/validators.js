@@ -94,11 +94,17 @@ const marksValidators = {
     body('marks')
       .isArray().withMessage('Marks must be an array'),
     body('marks.*.componentId')
-      .isMongoId().withMessage('Invalid component ID'),
+      .optional({ nullable: true, checkFalsy: true }).isMongoId().withMessage('Invalid component ID'),
+    body('marks.*.componentName')
+      .optional().trim(),
     body('marks.*.marksObtained')
-      .isFloat({ min: 0 }).withMessage('Marks obtained must be a positive number'),
+      .optional({ nullable: true, checkFalsy: true }).isFloat({ min: 0 }).withMessage('Marks obtained must be a positive number'),
     body('marks.*.maxMarks')
-      .isFloat({ min: 0 }).withMessage('Max marks must be a positive number'),
+      .optional({ nullable: true, checkFalsy: true }).isFloat({ min: 0 }).withMessage('Max marks must be a positive number'),
+    body('marks.*.percentage')
+      .optional({ nullable: true, checkFalsy: true }).isFloat({ min: 0, max: 100 }).withMessage('Percentage must be between 0 and 100'),
+    body('marks.*.weightage')
+      .optional({ nullable: true, checkFalsy: true }).isFloat({ min: 0, max: 100 }).withMessage('Weightage must be between 0 and 100'),
     body('marks.*.isAbsent')
       .optional().isBoolean()
   ],
@@ -107,9 +113,17 @@ const marksValidators = {
     body('marks')
       .optional().isArray(),
     body('marks.*.componentId')
-      .optional().isMongoId(),
+      .optional({ nullable: true, checkFalsy: true }).isMongoId(),
+    body('marks.*.componentName')
+      .optional().trim(),
     body('marks.*.marksObtained')
-      .optional().isFloat({ min: 0 }),
+      .optional({ nullable: true, checkFalsy: true }).isFloat({ min: 0 }),
+    body('marks.*.maxMarks')
+      .optional({ nullable: true, checkFalsy: true }).isFloat({ min: 0 }),
+    body('marks.*.percentage')
+      .optional({ nullable: true, checkFalsy: true }).isFloat({ min: 0, max: 100 }),
+    body('marks.*.weightage')
+      .optional({ nullable: true, checkFalsy: true }).isFloat({ min: 0, max: 100 }),
     body('graceMarksApplied')
       .optional().isFloat({ min: 0, max: 10 }),
     body('status')

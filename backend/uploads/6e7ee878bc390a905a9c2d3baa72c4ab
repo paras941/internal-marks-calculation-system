@@ -1,0 +1,36 @@
+Subject Code,Subject Name,Department,Semester,Component,Max Marks,Marks Obtained,Weightage (%)
+BTIT501-18,DAA,Btech,Semester 5,Midterm,30,15,30
+BTIT501-18,DAA,Btech,Semester 5,Assignment,10,8,10
+BTIT501-18,DAA,Btech,Semester 5,Lab,45,35,45
+BTIT501-18,DAA,Btech,Semester 5,Quiz,10,10,10
+BTIT501-18,DAA,Btech,Semester 5,Presentation,5,4,5
+BTIT501-22,Mathematics 1,Btech,Semester 5,Midterm,30,22,30
+BTIT501-22,Mathematics 1,Btech,Semester 5,Assignment,10,9,10
+BTIT501-22,Mathematics 1,Btech,Semester 5,Lab,45,40,45
+BTIT501-22,Mathematics 1,Btech,Semester 5,Quiz,10,8,10
+BTIT501-22,Mathematics 1,Btech,Semester 5,Presentation,5,5,5
+BTIT601-22,Big Data,Btech,Semester 5,Midterm,30,18,30
+BTIT601-22,Big Data,Btech,Semester 5,Assignment,10,7,10
+BTIT601-22,Big Data,Btech,Semester 5,Lab,45,32,45
+BTIT601-22,Big Data,Btech,Semester 5,Quiz,10,9,10
+BTIT601-22,Big Data,Btech,Semester 5,Presentation,5,4,5
+BTIT602-18,Operating System,Btech,Semester 5,Midterm,30,25,30
+BTIT602-18,Operating System,Btech,Semester 5,Assignment,10,10,10
+BTIT602-18,Operating System,Btech,Semester 5,Lab,45,42,45
+BTIT602-18,Operating System,Btech,Semester 5,Quiz,10,10,10
+BTIT602-18,Operating System,Btech,Semester 5,Presentation,5,5,5
+BTIT603-18,Computer Network,Btech,Semester 5,Midterm,30,20,30
+BTIT603-18,Computer Network,Btech,Semester 5,Assignment,10,8,10
+BTIT603-18,Computer Network,Btech,Semester 5,Lab,45,38,45
+BTIT603-18,Computer Network,Btech,Semester 5,Quiz,10,7,10
+BTIT603-18,Computer Network,Btech,Semester 5,Presentation,5,4,5
+DMO501,Demo Software Engineering,CSE,Semester 5,Midterm,30,21,30
+DMO501,Demo Software Engineering,CSE,Semester 5,Assignment,10,9,10
+DMO501,Demo Software Engineering,CSE,Semester 5,Lab,45,39,45
+DMO501,Demo Software Engineering,CSE,Semester 5,Quiz,10,8,10
+DMO501,Demo Software Engineering,CSE,Semester 5,Presentation,5,5,5
+DMO502,Demo Database Systems,CSE,Semester 5,Midterm,30,19,30
+DMO502,Demo Database Systems,CSE,Semester 5,Assignment,10,8,10
+DMO502,Demo Database Systems,CSE,Semester 5,Lab,45,36,45
+DMO502,Demo Database Systems,CSE,Semester 5,Quiz,10,9,10
+DMO502,Demo Database Systems,CSE,Semester 5,Presentation,5,4,5
