@@ -7,6 +7,86 @@ const { processBulkMarksUpload, parseCSV, generateCSVTemplate } = require('../ut
 const fs = require('fs');
 const mongoose = require('mongoose');
 
+const buildComponentLookup = (scheme) => {
+  const components = Array.isArray(scheme?.components) ? scheme.components : [];
+
+  return {
+    components,
+    byId: new Map(components.map((component) => [component._id.toString(), component])),
+    byName: new Map(components.map((component) => [String(component.name).trim().toLowerCase(), component]))
+  };
+};
+
+const normalizeMarkEntry = (mark, lookup) => {
+  if (!mark || typeof mark !== 'object') {
+    return { error: 'Each marks entry must be a valid object' };
+  }
+
+  const rawComponentId = mark.componentId ? String(mark.componentId).trim() : '';
+  let schemeComponent = null;
+
+  if (rawComponentId) {
+    if (!mongoose.Types.ObjectId.isValid(rawComponentId)) {
+      return { error: `Invalid component ID: ${mark.componentId}` };
+    }
+
+    schemeComponent = lookup.byId.get(rawComponentId) || null;
+    if (!schemeComponent) {
+      return { error: `Invalid component ID: ${mark.componentId}` };
+    }
+  } else if (mark.componentName) {
+    schemeComponent = lookup.byName.get(String(mark.componentName).trim().toLowerCase()) || null;
+  }
+
+  const componentName = String(mark.componentName || schemeComponent?.name || '').trim();
+  if (!componentName) {
+    return { error: 'componentName is required for each marks entry' };
+  }
+
+  const maxMarksSource = mark.maxMarks ?? schemeComponent?.maxMarks;
+  const maxMarks = Number(maxMarksSource);
+  if (!Number.isFinite(maxMarks) || maxMarks < 0) {
+    return { error: `Invalid maxMarks for component ${componentName}` };
+  }
+
+  const percentageSource = mark.percentage ?? mark.weightage ?? schemeComponent?.weightage ?? 0;
+  const percentage = Number(percentageSource);
+  if (!Number.isFinite(percentage) || percentage < 0 || percentage > 100) {
+    return { error: `Invalid percentage for component ${componentName}` };
+  }
+
+  const isAbsent = Boolean(mark.isAbsent);
+  const marksObtainedRaw = isAbsent ? 0 : mark.marksObtained;
+
+  if (!isAbsent && (marksObtainedRaw === undefined || marksObtainedRaw === null || marksObtainedRaw === '')) {
+    return { error: `marksObtained is required for component ${componentName}` };
+  }
+
+  const marksObtained = Number(marksObtainedRaw);
+  if (!Number.isFinite(marksObtained) || marksObtained < 0) {
+    return { error: `Invalid marksObtained for component ${componentName}` };
+  }
+
+  if (!isAbsent && marksObtained > maxMarks) {
+    return {
+      error: `Marks obtained (${marksObtained}) cannot exceed max marks (${maxMarks}) for ${componentName}`
+    };
+  }
+
+  return {
+    value: {
+      componentName,
+      componentId: schemeComponent?._id,
+      marksObtained,
+      maxMarks,
+      percentage,
+      isAbsent,
+      isGraceApplied: Boolean(mark.isGraceApplied),
+      isBestOfTwo: Boolean(mark.isBestOfTwo)
+    }
+  };
+};
+
 // @desc    Get all marks
 // @route   GET /api/marks
 // @access  Private
@@ -168,73 +248,19 @@ exports.createMarks = async (req, res) => {
     }
 
     const normalizedMarks = [];
+    const lookup = buildComponentLookup(scheme);
 
     // Validate each mark component
     for (const mark of marks) {
-      if (!mark || typeof mark !== 'object') {
+      const normalized = normalizeMarkEntry(mark, lookup);
+      if (normalized.error) {
         return res.status(400).json({
           success: false,
-          message: 'Each marks entry must be a valid object'
+          message: normalized.error
         });
       }
 
-      if (!mark.componentId) {
-        return res.status(400).json({
-          success: false,
-          message: 'componentId is required for each marks entry'
-        });
-      }
-
-      if (!mongoose.Types.ObjectId.isValid(mark.componentId)) {
-        return res.status(400).json({
-          success: false,
-          message: `Invalid component ID: ${mark.componentId}`
-        });
-      }
-
-      const component = scheme.components.find(c => c._id.toString() === mark.componentId?.toString());
-      if (!component) {
-        return res.status(400).json({
-          success: false,
-          message: `Invalid component ID: ${mark.componentId}`
-        });
-      }
-
-      const isAbsent = Boolean(mark.isAbsent);
-      const marksObtainedRaw = isAbsent ? 0 : mark.marksObtained;
-
-      if (!isAbsent && (marksObtainedRaw === undefined || marksObtainedRaw === null || marksObtainedRaw === '')) {
-        return res.status(400).json({
-          success: false,
-          message: `marksObtained is required for component ${component.name}`
-        });
-      }
-
-      const marksObtained = Number(marksObtainedRaw);
-
-      if (!Number.isFinite(marksObtained) || marksObtained < 0) {
-        return res.status(400).json({
-          success: false,
-          message: `Invalid marksObtained for component ${component.name}`
-        });
-      }
-
-      if (!isAbsent && marksObtained > component.maxMarks) {
-        return res.status(400).json({
-          success: false,
-          message: `Marks obtained (${marksObtained}) cannot exceed max marks (${component.maxMarks}) for ${component.name}`
-        });
-      }
-
-      normalizedMarks.push({
-        componentName: mark.componentName || component.name,
-        componentId: component._id,
-        marksObtained,
-        maxMarks: mark.maxMarks ?? component.maxMarks,
-        isAbsent,
-        isGraceApplied: Boolean(mark.isGraceApplied),
-        isBestOfTwo: Boolean(mark.isBestOfTwo)
-      });
+      normalizedMarks.push(normalized.value);
     }
 
     // Validate grace marks
@@ -378,7 +404,7 @@ exports.updateMarks = async (req, res) => {
     const scheme = studentMarks.subjectId;
 
     // Validate marks if provided
-    if (marks) {
+    if (marks !== undefined) {
       if (!Array.isArray(marks) || marks.length === 0) {
         return res.status(400).json({
           success: false,
@@ -386,23 +412,22 @@ exports.updateMarks = async (req, res) => {
         });
       }
 
-      // Validate each mark component
+      const lookup = buildComponentLookup(scheme);
+
+      const normalizedMarks = [];
       for (const mark of marks) {
-        const component = scheme.components.find(c => c._id.toString() === mark.componentId?.toString());
-        if (!component) {
+        const normalized = normalizeMarkEntry(mark, lookup);
+        if (normalized.error) {
           return res.status(400).json({
             success: false,
-            message: `Invalid component ID: ${mark.componentId}`
+            message: normalized.error
           });
         }
 
-        if (!mark.isAbsent && mark.marksObtained > component.maxMarks) {
-          return res.status(400).json({
-            success: false,
-            message: `Marks obtained (${mark.marksObtained}) cannot exceed max marks (${component.maxMarks}) for ${component.name}`
-          });
-        }
+        normalizedMarks.push(normalized.value);
       }
+
+      studentMarks.marks = normalizedMarks;
     }
 
     // Validate grace marks
@@ -414,9 +439,6 @@ exports.updateMarks = async (req, res) => {
     }
 
     // Update fields
-    if (marks) {
-      studentMarks.marks = marks;
-    }
     if (graceMarksApplied !== undefined) {
       studentMarks.graceMarksApplied = graceMarksApplied;
     }

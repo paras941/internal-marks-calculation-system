@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const AuditLog = require('../models/AuditLog');
 const mongoose = require('mongoose');
+const { parseCSV, processBulkUsersUpload } = require('../utils/csvParser');
 
 // @desc    Get all users
 // @route   GET /api/users
@@ -334,6 +335,61 @@ exports.getFaculty = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching faculty'
+    });
+  }
+};
+
+// @desc    Bulk upload users via CSV
+// @route   POST /api/users/bulk
+// @access  Private (Admin, HOD)
+exports.bulkUploadUsers = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please upload a CSV file'
+      });
+    }
+
+    const csvData = await parseCSV(req.file.path);
+    if (csvData.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'CSV file is empty'
+      });
+    }
+
+    const results = await processBulkUsersUpload(csvData, req.user._id);
+
+    try {
+      await AuditLog.create({
+        userId: req.user._id,
+        action: 'CREATE',
+        entityType: 'USER',
+        description: `Bulk uploaded users: ${results.success.length} successful, ${results.errors.length} errors`,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+    } catch (auditError) {
+      console.error('[BULK_UPLOAD_USERS] Audit log creation failed', {
+        error: auditError.message
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: results
+    });
+  } catch (error) {
+    console.error('[BULK_UPLOAD_USERS] Unexpected error', {
+      errorName: error.name,
+      errorMessage: error.message,
+      stack: error.stack
+    });
+
+    res.status(500).json({
+      success: false,
+      message: 'Error uploading users CSV'
     });
   }
 };

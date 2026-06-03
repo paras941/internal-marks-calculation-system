@@ -1,5 +1,19 @@
 const EvaluationScheme = require('../models/EvaluationScheme');
 const AuditLog = require('../models/AuditLog');
+const { parseCSV, processBulkSchemesUpload } = require('../utils/csvParser');
+
+const normalizeComponentsPayload = (components) => {
+  if (!Array.isArray(components)) {
+    return [];
+  }
+
+  return components.map((component) => ({
+    name: component.name,
+    maxMarks: component.maxMarks,
+    weightage: component.percentage ?? component.weightage,
+    isOptional: component.isOptional
+  }));
+};
 
 // @desc    Get all evaluation schemes
 // @route   GET /api/schemes
@@ -95,7 +109,8 @@ exports.createScheme = async (req, res) => {
     }
 
     // Validate total weightage
-    const totalWeightage = components.reduce((sum, c) => sum + c.weightage, 0);
+    const normalizedComponents = normalizeComponentsPayload(components);
+    const totalWeightage = normalizedComponents.reduce((sum, c) => sum + Number(c.weightage || 0), 0);
     if (totalWeightage > 100) {
       return res.status(400).json({
         success: false,
@@ -108,7 +123,7 @@ exports.createScheme = async (req, res) => {
       semester: parseInt(semester),
       subjectCode: subjectCode.toUpperCase(),
       subjectName,
-      components,
+      components: normalizedComponents,
       graceMarks,
       attendanceThreshold,
       bestOfTwoLogic,
@@ -159,14 +174,15 @@ exports.updateScheme = async (req, res) => {
 
     // Validate total weightage if components are being updated
     if (components) {
-      const totalWeightage = components.reduce((sum, c) => sum + c.weightage, 0);
+      const normalizedComponents = normalizeComponentsPayload(components);
+      const totalWeightage = normalizedComponents.reduce((sum, c) => sum + Number(c.weightage || 0), 0);
       if (totalWeightage > 100) {
         return res.status(400).json({
           success: false,
           message: 'Total weightage cannot exceed 100%'
         });
       }
-      scheme.components = components;
+      scheme.components = normalizedComponents;
     }
 
     if (department) scheme.department = department;
@@ -201,6 +217,61 @@ exports.updateScheme = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating evaluation scheme'
+    });
+  }
+};
+
+// @desc    Bulk upload schemes via CSV
+// @route   POST /api/schemes/bulk
+// @access  Private (Admin, HOD)
+exports.bulkUploadSchemes = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please upload a CSV file'
+      });
+    }
+
+    const csvData = await parseCSV(req.file.path);
+    if (csvData.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'CSV file is empty'
+      });
+    }
+
+    const results = await processBulkSchemesUpload(csvData, req.user._id);
+
+    try {
+      await AuditLog.create({
+        userId: req.user._id,
+        action: 'CREATE',
+        entityType: 'EVALUATION_SCHEME',
+        description: `Bulk uploaded schemes: ${results.success.length} successful, ${results.errors.length} errors`,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+    } catch (auditError) {
+      console.error('[BULK_UPLOAD_SCHEMES] Audit log creation failed', {
+        error: auditError.message
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: results
+    });
+  } catch (error) {
+    console.error('[BULK_UPLOAD_SCHEMES] Unexpected error', {
+      errorName: error.name,
+      errorMessage: error.message,
+      stack: error.stack
+    });
+
+    res.status(500).json({
+      success: false,
+      message: 'Error uploading schemes CSV'
     });
   }
 };
